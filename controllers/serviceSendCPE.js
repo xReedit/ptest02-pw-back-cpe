@@ -35,7 +35,7 @@ const activarEnvioCpe = async function () {
 	const minInterval = 600000; // cada 10min
 	// const minInterval = 1000; // cada 10min
 
-	setInterval(() => {timerProcess()}, minInterval);
+	setInterval(timerProcess, minInterval);
 }
 module.exports.activarEnvioCpe = activarEnvioCpe;	
 
