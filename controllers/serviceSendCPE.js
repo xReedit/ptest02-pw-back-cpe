@@ -32,8 +32,8 @@ module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 
 const activarEnvioCpe = async function () {	
 	console.log('ingreso cocinar cpe')
-	// const minInterval = 600000; // cada 10min
-	const minInterval = 1000; // cada 10min
+	const minInterval = 600000; // cada 10min
+	// const minInterval = 1000; // cada 10min
 
 	setInterval(() => {timerProcess()}, minInterval);
 }
@@ -46,7 +46,7 @@ function timerProcess() {
 		const dayWeek = date_now.getDay();
 		console.log('hora',hoursNow)
 
-		if ( hoursNow === 16 && !cocinandoEnvioCPE ) {// 02:00
+		if ( hoursNow === 2 && !cocinandoEnvioCPE ) {// 02:00
 			cocinandoEnvioCPE = true;
 			console.log('cocinando envio cpe', date_now.toLocaleDateString());
 			cocinarEnvioCPE();
