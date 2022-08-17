@@ -77,6 +77,7 @@ const cocinarEnvioCPE = async function () {
 	console.log('cocinarEnvioCPE');	
 	// obtener sedes con facturacion
 	const lista_sedes = await getSedesCPE();
+	console.log(lista_sedes);
 
 	// fecha resumen	
 	const fecha_resumen = getFechaDiaAnterior();
@@ -362,6 +363,8 @@ function xLimpiarPrintDetalle () {
 
 
 function emitirRespuesta(xquery) {
+	console.log('xquery', xquery);
+
 	return sequelize.query(xquery, {type: sequelize.QueryTypes.SELECT})
 	.then(function (rows) {
 		
