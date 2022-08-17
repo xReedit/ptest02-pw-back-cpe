@@ -77,7 +77,7 @@ const cocinarEnvioCPE = async function () {
 	console.log('cocinarEnvioCPE');	
 	// obtener sedes con facturacion
 	const lista_sedes = await getSedesCPE();
-	console.log(lista_sedes);
+	console.log('lista_sedes', lista_sedes);
 
 	// fecha resumen	
 	const fecha_resumen = getFechaDiaAnterior();
