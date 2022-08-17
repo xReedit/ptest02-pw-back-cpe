@@ -32,10 +32,10 @@ module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 
 const activarEnvioCpe = async function () {	
 	console.log('ingreso cocinar cpe')
-	const minInterval = 600000; // cada 10min
-	// const minInterval = 1000; // cada 10min
+	// const minInterval = 600000; // cada 10min
+	const minInterval = 8000; // cada 10min
 
-	setInterval(timerProcess, minInterval);
+	const _timerLoop = setInterval(timerProcess, minInterval);
 }
 module.exports.activarEnvioCpe = activarEnvioCpe;	
 
