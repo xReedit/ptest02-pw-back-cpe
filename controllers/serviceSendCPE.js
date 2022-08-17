@@ -5,7 +5,6 @@
 const { to, ReE, ReS }  = require('../service/uitl.service');
 let Sequelize = require('sequelize');
 let config = require('../config');
-console.log('config', config);
 // let managerFilter = require('../utilitarios/filters');
 
 const fetch = require("node-fetch");
@@ -34,7 +33,7 @@ module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 const activarEnvioCpe = async function () {	
 	console.log('ingreso cocinar cpe')
 	// const minInterval = 600000; // cada 10min
-	const minInterval = 8000; // cada 10min
+	const minInterval = 120000; // cada 2min
 
 	const _timerLoop = setInterval(timerProcess, minInterval);
 }
@@ -47,13 +46,19 @@ function timerProcess() {
 		const dayWeek = date_now.getDay();
 		console.log('hora',hoursNow)
 
-		if ( hoursNow === 0 && !cocinandoEnvioCPE ) {// 02:00
+		if ( hoursNow === 10 || hoursNow === 16 && !cocinandoEnvioCPE ) {// 10:00 am o a las 4pm  o 2am
 			cocinandoEnvioCPE = true;
 			console.log('cocinando envio cpe', date_now.toLocaleDateString());
-			cocinarEnvioCPE();
+			cocinarEnvioCPE(true); // oara que no reste fecha
 		}
 
-		if ( hoursNow === 4 && cocinandoEnvioCPE ) {// 03:00
+		if ( hoursNow === 2 && !cocinandoEnvioCPE ) {// 02:00
+			cocinandoEnvioCPE = true;
+			console.log('cocinando envio cpe', date_now.toLocaleDateString());
+			cocinarEnvioCPE(false);
+		}
+
+		if ( hoursNow === 11 || hoursNow === 18 || hoursNow === 4 && cocinandoEnvioCPE ) {// 03:00
 			console.log('cambia condicion', date_now.toLocaleDateString());
 			cocinandoEnvioCPE = false;
 		}
@@ -74,14 +79,14 @@ function timerProcess() {
 }
 
 // se ejecuta a las 02:00 horas
-const cocinarEnvioCPE = async function () {
+const cocinarEnvioCPE = async function (isDayHoy = false) {
 	console.log('cocinarEnvioCPE');	
 	// obtener sedes con facturacion
 	const lista_sedes = await getSedesCPE();
 	console.log('lista_sedes', lista_sedes);
 
 	// fecha resumen	
-	const fecha_resumen = getFechaDiaAnterior();
+	const fecha_resumen = getFechaDiaAnterior(isDayHoy);
 
 	const countList = lista_sedes.length;
 	for (var i = countList - 1; i >= 0; i--) {
@@ -129,8 +134,9 @@ const cocinarEnvioCPE = async function () {
 		    // 4) enviamos (se envian uno por uno) solo facturas - los que fueron registrados pero no enviados a la sunat x problemas de conexion con el servicio. o offline
 			// list_cpe_nr = listCpe.filter(c => c.estado_sunat === 1 && c.numero.indexOf('F') > -1 );
 			// 140722 uno x uno todo aca van los comprobantes que no fueron aceptados en resumen
-			sqlCpe = `select * from ce where idsede = ${idsede} and fecha = '${fecha_resumen}' and (estado=0 and anulado=0);`;
-			listCpe = await emitirRespuesta(sqlCpe);		
+			
+			// sqlCpe = `select * from ce where idsede = ${idsede} and fecha = '${fecha_resumen}' and (estado=0 and anulado=0);`;
+			// listCpe = await emitirRespuesta(sqlCpe);		
 			numRowsCpe = listCpe.length;
 			list_cpe_nr = listCpe.filter(c => c.estado_sunat === 1);
 			numRowListNR = list_cpe_nr.length;
@@ -151,19 +157,19 @@ const cocinarEnvioCPE = async function () {
 
 
 	// revisa los resumens
-	cocinarRespuestaResumenCPE();
+	cocinarRespuestaResumenCPE(isDayHoy);
 
 }
 module.exports.cocinarEnvioCPE = cocinarEnvioCPE;	
 
 // se ejecuta a las 03:00 horas
-const cocinarRespuestaResumenCPE = async function () {
+const cocinarRespuestaResumenCPE = async function (isDayHoy = false) {
 	// obtener sedes con facturacion
 	console.log('cocinarRespuestaResumenCPE');
 	const lista_sedes = await getSedesCPE();
 
 	// fecha resumen	
-	const fecha_resumen = getFechaDiaAnterior();
+	const fecha_resumen = getFechaDiaAnterior(isDayHoy);
 	const fecha_resumen_yymmdd = fecha_resumen.split('/').reverse().join('-');
 
 	
@@ -222,10 +228,13 @@ async function getSedesCPE() {
 	return await emitirRespuesta(sql_sedes);
 }
 
-function getFechaDiaAnterior() {
+function getFechaDiaAnterior(isDayHoy = false) {
 	const fechaDefault = searchCpeByDate;
 	const fechaNow = fechaDefault ? new Date(fechaDefault) : new Date();
 	const fecha_resumen = fechaDefault ? fechaNow : new Date(fechaNow.setDate(fechaNow.getDate() - 1)); // produccion
+	if ( isDayHoy == true ) {
+		fecha_resumen = new Date();
+	}
 	// const fecha_resumen = new Date(fechaNow.setDate(fechaNow.getDate())); // desarrollo
 	return fecha_resumen.toJSON().slice(0, 10).split('-').reverse().join('/');
 }
@@ -364,8 +373,6 @@ function xLimpiarPrintDetalle () {
 
 
 function emitirRespuesta(xquery) {
-	console.log('xquery', xquery);
-
 	return sequelize.query(xquery, {type: sequelize.QueryTypes.SELECT})
 	.then(function (rows) {
 		
