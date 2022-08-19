@@ -134,7 +134,7 @@ const cocinarEnvioCPE = async function (isDayHoy = false) {
 		    // 4) enviamos (se envian uno por uno) solo facturas - los que fueron registrados pero no enviados a la sunat x problemas de conexion con el servicio. o offline
 			// list_cpe_nr = listCpe.filter(c => c.estado_sunat === 1 && c.numero.indexOf('F') > -1 );
 			// 140722 uno x uno todo aca van los comprobantes que no fueron aceptados en resumen
-			
+
 			// sqlCpe = `select * from ce where idsede = ${idsede} and fecha = '${fecha_resumen}' and (estado=0 and anulado=0);`;
 			// listCpe = await emitirRespuesta(sqlCpe);		
 			numRowsCpe = listCpe.length;
@@ -231,7 +231,7 @@ async function getSedesCPE() {
 function getFechaDiaAnterior(isDayHoy = false) {
 	const fechaDefault = searchCpeByDate;
 	const fechaNow = fechaDefault ? new Date(fechaDefault) : new Date();
-	const fecha_resumen = fechaDefault ? fechaNow : new Date(fechaNow.setDate(fechaNow.getDate() - 1)); // produccion
+	var fecha_resumen = fechaDefault ? fechaNow : new Date(fechaNow.setDate(fechaNow.getDate() - 1)); // produccion
 	if ( isDayHoy == true ) {
 		fecha_resumen = new Date();
 	}
