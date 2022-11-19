@@ -53,7 +53,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('10 1,3,5 * * *', () => {		
+	cron.schedule('50 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -136,6 +136,7 @@ async function runCPEApiSunat() {
 	if ( listaComprobantes.length === 0 ) { cocinandoValidezApiSunat = false; return }
 
 	let listCpeUpdateRegisterSunat = []
+	let listCpeOkRegisterApifac = []
 
 	for (const cpe of listaComprobantes) {
 		token_sunat = await verificarTokenApiSunat()
@@ -174,7 +175,8 @@ async function runCPEApiSunat() {
 				// si fue aceptado lo guarda en apifact				
 				if (rpt_c.data.estadoCp === '1') {
 					// update apifact
-					const rptRes = await registerStatusRptSunatApiFact(_rowItem)
+					listCpeOkRegisterApifac.push(_rowItem)
+					// const rptRes = await registerStatusRptSunatApiFact(_rowItem)
 					console.log('rptRes', rptRes)
 				}
 			}			
@@ -182,6 +184,8 @@ async function runCPEApiSunat() {
 
 	}
 
+	// update apifact
+	registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
 	// update en bd-restobar
 	updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
 
@@ -286,14 +290,20 @@ async function updateStatusCpeValidacion(list) {
 	
 }
 
-async function registerStatusRptSunatApiFact(cpe) {	
+async function registerStatusRptSunatApiFact(_list) {	
+	if ( _list.length === 0 ) return;
+	
 	const _urlCPEStatusSunat = URL_COMPROBANTE+ '/documents/setRptSunat';	
 	var _headers = HEADERS_COMPROBANTE;	
 	// _headers.Authorization = 'Bearer ' + cpe.token_api;
 
+	// const _playload = {
+	// 	user_id: cpe.user_id,
+	// 	external_id: cpe.external_id
+	// }
+
 	const _playload = {
-		user_id: cpe.user_id,
-		external_id: cpe.external_id
+		list: _list
 	}
 
 	return await fetch(_urlCPEStatusSunat, {
