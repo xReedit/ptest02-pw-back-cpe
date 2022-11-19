@@ -16,7 +16,7 @@ let url_restobar = config.URL_RESTOBAR;
 let sequelize = new Sequelize(config.database, config.username, config.password, config.sequelizeOption);
 let token_sunat = ''
 let token_sunat_exp = 0
-const date_now = new Date();		
+		
 
 let mysql_clean = function (string) {
         return sequelize.getQueryInterface().escape(string);
@@ -39,9 +39,9 @@ module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 
 const activarEnvioCpe = async function () {	
 	console.log('ingreso cocinar cpe')	
-	// const minInterval = 120000; // cada 2min
-	// const _timerLoop = setInterval(timerProcess, minInterval);
-	loop_process_validacion();
+	const minInterval = 120000; // cada 2min
+	const _timerLoop = setInterval(timerProcess, minInterval);
+	// loop_process_validacion();
 }
 module.exports.activarEnvioCpe = activarEnvioCpe;
 
@@ -50,6 +50,7 @@ module.exports.activarEnvioCpe = activarEnvioCpe;
 
 // 171122 procesos repetitivos
 function loop_process_validacion() {
+	const date_now = new Date();
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
@@ -327,28 +328,28 @@ function timerProcess() {
 		if ( hoursNow === 10 || hoursNow === 16 && !cocinandoEnvioCPE ) {// 10:00 am o a las 4pm  o 2am
 			cocinandoEnvioCPE = true;
 			console.log('cocinando envio cpe', date_now.toLocaleDateString());
-			// cocinarEnvioCPE(true); // oara que no reste fecha
-			validarComprobanteElectronicos()
+			cocinarEnvioCPE(true); // oara que no reste fecha
+			// validarComprobanteElectronicos()
 		}
 
 		// validez cpe
-		if ( hoursNow === 1 && !cocinandoValidezApiSunat ) {// 01:00
-			cocinandoValidezApiSunat = true;
-			console.log('cocinando validez api sunat', date_now.toLocaleDateString());
-			runCPEApiSunat()
-		}
+		// if ( hoursNow === 1 && !cocinandoValidezApiSunat ) {// 01:00
+		// 	cocinandoValidezApiSunat = true;
+		// 	console.log('cocinando validez api sunat', date_now.toLocaleDateString());
+		// 	runCPEApiSunat()
+		// }
 
-		if ( hoursNow === 3 && !cocinandoValidezApiSunat ) {// 03:00
-			cocinandoValidezApiSunat = true;
-			console.log('cocinando validez api sunat', date_now.toLocaleDateString());
-			runCPEApiSunat()
-		}
+		// if ( hoursNow === 3 && !cocinandoValidezApiSunat ) {// 03:00
+		// 	cocinandoValidezApiSunat = true;
+		// 	console.log('cocinando validez api sunat', date_now.toLocaleDateString());
+		// 	runCPEApiSunat()
+		// }
 
-		if ( hoursNow === 5 && !cocinandoValidezApiSunat ) {// 05:00
-			cocinandoValidezApiSunat = true;
-			console.log('cocinando validez api sunat', date_now.toLocaleDateString());
-			runCPEApiSunat()
-		}
+		// if ( hoursNow === 5 && !cocinandoValidezApiSunat ) {// 05:00
+		// 	cocinandoValidezApiSunat = true;
+		// 	console.log('cocinando validez api sunat', date_now.toLocaleDateString());
+		// 	runCPEApiSunat()
+		// }
 
 		///////////////////
 
@@ -357,14 +358,14 @@ function timerProcess() {
 		if ( hoursNow === 2 && !cocinandoEnvioCPE ) {// 02:00
 			cocinandoEnvioCPE = true;
 			console.log('cocinando envio cpe', date_now.toLocaleDateString());
-			// cocinarEnvioCPE(false);
-			validarComprobanteElectronicos()
+			cocinarEnvioCPE(false);
+			// validarComprobanteElectronicos()
 		}
 
 
 
 		if ( hoursNow === 11 || hoursNow === 18 || hoursNow === 4 && cocinandoEnvioCPE ) {// 03:00
-			console.log('cambia condicion', date_now.toLocaleDateString());
+			console.log('cambia condicion', date_now.toLocaleDateString());			
 			cocinandoEnvioCPE = false;
 		}
 
