@@ -2,8 +2,6 @@
 // 01:00 horas envia comprobantes dia anterior
 // 03:00 actualiza estado de los comprobantes si el resumen fue aceptado
 
-const cron = require('node-cron');
-
 const { to, ReE, ReS }  = require('../service/uitl.service');
 let Sequelize = require('sequelize');
 let config = require('../config');
@@ -11,11 +9,14 @@ const apiConsultaSunatCPE = require('../controllers/apiConsultaValidezSunat');
 // let managerFilter = require('../utilitarios/filters');
 
 const fetch = require("node-fetch");
+const cron = require('node-cron');
+
 // var FormData = require('form-data');
 let url_restobar = config.URL_RESTOBAR;
 let sequelize = new Sequelize(config.database, config.username, config.password, config.sequelizeOption);
 let token_sunat = ''
 let token_sunat_exp = 0
+const date_now = new Date();		
 
 let mysql_clean = function (string) {
         return sequelize.getQueryInterface().escape(string);
@@ -50,13 +51,15 @@ module.exports.activarEnvioCpe = activarEnvioCpe;
 // 171122 procesos repetitivos
 function loop_process_validacion() {
 
+	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('1 2,3,6 * * *', () => {		
+	cron.schedule('1 2,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
 
-	cron.schedule('1 10,16,18,1,4 * * *', () => {		
+	// 10,16,18,1,4hrs corre reenvio de comprobantes
+	cron.schedule('7 10,16,18,1,4 * * *', () => {		
 		console.log('Cocinando envio cpe', date_now.toLocaleDateString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
@@ -69,8 +72,8 @@ function loop_process_validacion() {
 		xLimpiarPrintDetalle();
 	});
 
-	// a las 5am ordena comercios con mas pedidos --app delivery
-	cron.schedule('1 5 * * 1', () => {		
+	// a las 4:35am ordena comercios con mas pedidos --app delivery
+	cron.schedule('35 4 * * 1', () => {		
 		// comercios con mas pedidos app delivery
 		const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
 		emitirRespuesta(_sqlCountPedidos);
