@@ -53,7 +53,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('1 2,3,5 * * *', () => {		
+	cron.schedule('8 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -150,6 +150,8 @@ async function runCPEApiSunat() {
 			"fechaEmision": cpe.fecha,
 			"monto": cpe.total
 		}
+
+		console.log('_payload', _payload)
 
 		const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
 
