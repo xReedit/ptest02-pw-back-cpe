@@ -139,7 +139,7 @@ async function runCPEApiSunat() {
 
 	for (const cpe of listaComprobantes) {
 		token_sunat = await verificarTokenApiSunat()
-		const arr_numero = cpe.numero.split('-')[0]
+		const arr_numero = cpe.numero.split('-')
 		const serie = arr_numero[0];
 		const numero = parseInt(arr_numero[1]);
 		const _payload = {
