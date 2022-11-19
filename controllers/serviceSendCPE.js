@@ -2,15 +2,20 @@
 // 01:00 horas envia comprobantes dia anterior
 // 03:00 actualiza estado de los comprobantes si el resumen fue aceptado
 
+const cron = require('node-cron');
+
 const { to, ReE, ReS }  = require('../service/uitl.service');
 let Sequelize = require('sequelize');
 let config = require('../config');
+const apiConsultaSunatCPE = require('../controllers/apiConsultaValidezSunat');
 // let managerFilter = require('../utilitarios/filters');
 
 const fetch = require("node-fetch");
 // var FormData = require('form-data');
 let url_restobar = config.URL_RESTOBAR;
 let sequelize = new Sequelize(config.database, config.username, config.password, config.sequelizeOption);
+let token_sunat = ''
+let token_sunat_exp = 0
 
 let mysql_clean = function (string) {
         return sequelize.getQueryInterface().escape(string);
@@ -19,6 +24,7 @@ let mysql_clean = function (string) {
 const URL_COMPROBANTE = 'https://apifac.papaya.com.pe/api';
 var HEADERS_COMPROBANTE = { 'Content-Type': 'application/json', 'Authorization': ''}
 var cocinandoEnvioCPE = false;
+var cocinandoValidezApiSunat = false;
 var runCountPedidos = false;
 var searchCpeByDate = null;
 
@@ -31,13 +37,269 @@ module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 
 
 const activarEnvioCpe = async function () {	
-	console.log('ingreso cocinar cpe')
-	// const minInterval = 600000; // cada 10min
-	const minInterval = 120000; // cada 2min
-
-	const _timerLoop = setInterval(timerProcess, minInterval);
+	console.log('ingreso cocinar cpe')	
+	// const minInterval = 120000; // cada 2min
+	// const _timerLoop = setInterval(timerProcess, minInterval);
+	loop_process_validacion();
 }
-module.exports.activarEnvioCpe = activarEnvioCpe;	
+module.exports.activarEnvioCpe = activarEnvioCpe;
+
+
+
+
+// 171122 procesos repetitivos
+function loop_process_validacion() {
+
+	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
+	cron.schedule('1 2,3,6 * * *', () => {		
+		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
+		runCPEApiSunat()	  	
+	});
+
+	cron.schedule('1 10,16,18,1,4 * * *', () => {		
+		console.log('Cocinando envio cpe', date_now.toLocaleDateString());		
+		validarComprobanteElectronicos()	  	
+		// cocinarEnvioCPE(false);
+	});
+
+
+	// todos los diuas a l as 4:30 am
+	cron.schedule('30 4 * * *', () => {		
+		console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleDateString());		
+		xLimpiarPrintDetalle();
+	});
+
+	// a las 5am ordena comercios con mas pedidos --app delivery
+	cron.schedule('1 5 * * 1', () => {		
+		// comercios con mas pedidos app delivery
+		const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
+		emitirRespuesta(_sqlCountPedidos);
+	});	
+}
+
+
+// 171122
+// nuevo verificacion de comprobantes
+const validarComprobanteElectronicos = async(req, res) => {
+	// traer todas las boletas de hace 6 dias
+	cocinandoEnvioCPE = true;
+	const sqlCpe = `call procedure_get_comprobantes_validez()`;
+	const listaComprobantes = await emitirRespuesta_RES(sqlCpe);
+
+	if ( listaComprobantes.length === 0 ) { cocinandoEnvioCPE = false; return }
+
+	let listCpeUpdateRegisterApifac = []
+	let listCpeUpdateRegisterSunat = []	
+	
+
+	// 1 todos los que no se registraron en el apifact
+	const listNoRegisterApiFact = listaComprobantes.filter(c => c.estado_api.toString() === '1')
+	if ( listNoRegisterApiFact.length > 0 ) {
+		for (const cpe of listNoRegisterApiFact) {
+			const rpt_c = await registerCpeApiFact(cpe)
+			if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
+		}
+	}
+	// 1.1 update a todos los comprobantes que se registraron en apifact
+	await updateStatusAllCpeRegisterApiFact(listCpeUpdateRegisterApifac)
+
+
+	// 2 todos los que no se registraron en la sunat
+	const listNoRegisterSunat = listaComprobantes.filter(c => c.estado_sunat.toString() === '1')
+	if ( listNoRegisterSunat.length > 0 ) {
+		for (const cpe of listNoRegisterSunat) {
+			const rpt_c = await sendCpeSunat(cpe)
+			if ( rpt_c.success ) { listCpeUpdateRegisterSunat.push(cpe.idce) }
+		}
+	}
+	// 2.1 update a todos los comprobantes que se registraron en sunat
+	await updateStatusAllCpeRegisterSunat(listCpeUpdateRegisterSunat)
+
+	cocinandoEnvioCPE = false;
+	
+	
+}
+module.exports.validarComprobanteElectronicos = validarComprobanteElectronicos;
+
+
+// validamos utilizando el api sunat y se guarda 1 = paso en rpt_sunat apifactura
+// este proceso lo hacemos 3 veces durante la noche
+async function runCPEApiSunat() {
+
+	cocinandoValidezApiSunat = true;
+	const sqlCpe = `call procedure_get_comprobantes_validez()`;
+	const listaComprobantes = await emitirRespuesta_RES(sqlCpe);
+
+	if ( listaComprobantes.length === 0 ) { cocinandoValidezApiSunat = false; return }
+
+	let listCpeUpdateRegisterSunat = []
+
+	for (const cpe of listaComprobantes) {
+		token_sunat = await verificarTokenApiSunat()
+		const arr_numero = cpe.numero.split('-')[0]
+		const serie = arr_numero[0];
+		const numero = parseInt(arr_numero[1]);
+		const _payload = {
+			"numRuc": cpe.ruc,
+			"codComp": cpe.codsunat,
+			"numeroSerie": serie,
+			"numero": numero,
+			"fechaEmision": cpe.fecha,
+			"monto": cpe.total
+		}
+
+		const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
+
+		
+		
+		if ( rpt_c.success === true ) { 			
+
+			// solo si tiene respuesta guarda
+			if (rpt_c.data?.estadoCp) {
+				const _rowItem = {
+					idce: cpe.idce,
+					external_id: cpe.external_id,
+					user_id: cpe.id_api_comprobante,
+					data: rpt_c.data,
+					estado: rpt_c.data.estadoCp
+				}
+
+				listCpeUpdateRegisterSunat.push(_rowItem)				
+
+				// si fue aceptado lo guarda en apifact				
+				if (rpt_c.data.estadoCp === '1') {
+					// update apifact
+					await registerStatusRptSunatApiFact(_rowItem)
+				}
+			}			
+		}		
+
+	}
+
+	// update en bd-restobar
+	updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
+
+	cocinandoValidezApiSunat = false;
+
+}
+
+
+// registra el cpe en el apifact
+async function registerCpeApiFact(cpe) {	
+	const _urlEnvioCPE = URL_COMPROBANTE+ '/documents';	
+	var _headers = HEADERS_COMPROBANTE;	
+	_headers.Authorization = 'Bearer ' + cpe.token_api;
+
+	return await fetch(_urlEnvioCPE, {
+			method: 'POST',
+			headers: _headers,
+			body:cpe.json_xml
+		}).then(res => res.json());
+}
+
+// envia el cpe a la sunat
+async function sendCpeSunat(cpe) {	
+	const _urlEnvioRetryCPE = URL_COMPROBANTE+ '/send';	
+	var _headers = HEADERS_COMPROBANTE;	
+	_headers.Authorization = 'Bearer ' + cpe.token_api;
+
+	const _json = {
+        "external_id": cpe.external_id
+    }
+
+	return await fetch(_urlEnvioRetryCPE, {
+			method: 'POST',
+			headers: _headers,
+			body: JSON.stringify(_json)
+		}).then(res => res.json());
+}
+
+
+async function updateStatusAllCpeRegisterApiFact(listRegister) {
+	if ( listRegister.length === 0 ) return false;
+
+	sql_update = `update ce 
+                set estado_api=0, msj='Registrado', 
+                pdf=1,xml=1,cdr=0 where idce in (${listRegister.join(',')})`;
+        await emitirRespuesta(sql_update);
+}
+
+async function updateStatusAllCpeRegisterSunat(listRegister) {
+	if ( listRegister.length === 0 ) return false;
+	
+	sql_update = `update ce 
+                set estado_sunat=0, msj='Aceptado', 
+                cdr=1 where idce in (${listRegister.join(',')})`;
+        await emitirRespuesta(sql_update);
+}
+
+const verificarTokenApiSunat = async () => {
+	if ( token_sunat === '' ) {
+		return await obtenerTokenApiSunat()
+	} else {
+		// verifica si expiro
+		if ( token_sunat_exp <	new Date().getTime() ) {
+			return await obtenerTokenApiSunat()
+		} else {
+			return token_sunat
+		}
+	}	
+}
+
+const obtenerTokenApiSunat = async () => {
+	const token_api_sunat = await apiConsultaSunatCPE.getToken()
+	token_sunat_exp = token_api_sunat.exp * 1000
+	return token_api_sunat.access_token
+}
+
+
+async function updateStatusCpeValidacion(list) {	
+	if ( list.length === 0 ) return false;
+
+	const _dateRegister = new Date().toLocaleDateString();
+	const _listAceptado = list.filter(x => x.estado === '1').map(x => x.idce)	
+	if ( _listAceptado.length > 0) {
+		sql_update = `update ce 
+	                set status_sunat = 1, status_sunat_date = '${_dateRegister}', 
+	                where idce in (${_listAceptado.join(',')})`;
+	        await emitirRespuesta(sql_update);
+	}
+	
+
+
+        // no creo que entre aca 
+        // estado no existe en sunat
+        // vuelve a colocar estado_sunat = 1 y msj=Registrado // para que vuelva intertar enviarlo
+	const _listNoExiste = list.filter(x => x.estado === '0').map(x => x.idce)
+	if ( _listNoExiste.length > 0 ) {
+		sql_update = `update ce 
+	                set estado_sunat = 1, msj='Registrado', status_sunat_date = '${_dateRegister}', 
+	                where idce in (${_listNoExiste.join(',')})`;
+	        await emitirRespuesta(sql_update);
+	}
+	
+}
+
+async function registerStatusRptSunatApiFact(cpe) {	
+	const _urlCPEStatusSunat = URL_COMPROBANTE+ '/documents/setRptSunat';	
+	var _headers = HEADERS_COMPROBANTE;	
+	// _headers.Authorization = 'Bearer ' + cpe.token_api;
+
+	const _playload = {
+		user_id: cpe.user_id,
+		external_id: cpe.external_id
+	}
+
+	return await fetch(_urlCPEStatusSunat, {
+			method: 'POST',
+			headers: _headers,
+			body:_playload
+		}).then(res => res.json());
+}
+
+
+///////////////////////////////////////////////////////
+///////////////////////////////////////////////////////
 
 
 function timerProcess() {
@@ -49,14 +311,41 @@ function timerProcess() {
 		if ( hoursNow === 10 || hoursNow === 16 && !cocinandoEnvioCPE ) {// 10:00 am o a las 4pm  o 2am
 			cocinandoEnvioCPE = true;
 			console.log('cocinando envio cpe', date_now.toLocaleDateString());
-			cocinarEnvioCPE(true); // oara que no reste fecha
+			// cocinarEnvioCPE(true); // oara que no reste fecha
+			validarComprobanteElectronicos()
 		}
+
+		// validez cpe
+		if ( hoursNow === 1 && !cocinandoValidezApiSunat ) {// 01:00
+			cocinandoValidezApiSunat = true;
+			console.log('cocinando validez api sunat', date_now.toLocaleDateString());
+			runCPEApiSunat()
+		}
+
+		if ( hoursNow === 3 && !cocinandoValidezApiSunat ) {// 03:00
+			cocinandoValidezApiSunat = true;
+			console.log('cocinando validez api sunat', date_now.toLocaleDateString());
+			runCPEApiSunat()
+		}
+
+		if ( hoursNow === 5 && !cocinandoValidezApiSunat ) {// 05:00
+			cocinandoValidezApiSunat = true;
+			console.log('cocinando validez api sunat', date_now.toLocaleDateString());
+			runCPEApiSunat()
+		}
+
+		///////////////////
+
+
 
 		if ( hoursNow === 2 && !cocinandoEnvioCPE ) {// 02:00
 			cocinandoEnvioCPE = true;
 			console.log('cocinando envio cpe', date_now.toLocaleDateString());
-			cocinarEnvioCPE(false);
+			// cocinarEnvioCPE(false);
+			validarComprobanteElectronicos()
 		}
+
+
 
 		if ( hoursNow === 11 || hoursNow === 18 || hoursNow === 4 && cocinandoEnvioCPE ) {// 03:00
 			console.log('cambia condicion', date_now.toLocaleDateString());
@@ -77,6 +366,10 @@ function timerProcess() {
 			runCountPedidos = false;
 		}
 }
+
+
+
+
 
 // se ejecuta a las 02:00 horas
 const cocinarEnvioCPE = async function (isDayHoy = false) {
@@ -245,6 +538,8 @@ async function getBoletasResumenError(fecha_resumen) {
 
 
 
+
+///
 async function sendOneCpe(json_xml, token) {	
 	const _urlEnvioCPE = URL_COMPROBANTE+ '/documents';	
 	var _headers = HEADERS_COMPROBANTE;	
@@ -397,6 +692,16 @@ function emitirRespuesta_RES(xquery, res) {
 			data: rows
 		});
 		// return rows;
+	})
+	.catch((err) => {
+		return false;
+	});
+}
+
+function emitirRespuesta_RES(xquery) {
+	return sequelize.query(xquery)
+	.then(function (rows) {
+		return rows;
 	})
 	.catch((err) => {
 		return false;
