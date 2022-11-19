@@ -154,7 +154,7 @@ async function runCPEApiSunat() {
 		const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
 
 		
-		
+		console.log('rpt_c', rpt_c)
 		if ( rpt_c.success === true ) { 			
 
 			// solo si tiene respuesta guarda
@@ -172,7 +172,8 @@ async function runCPEApiSunat() {
 				// si fue aceptado lo guarda en apifact				
 				if (rpt_c.data.estadoCp === '1') {
 					// update apifact
-					await registerStatusRptSunatApiFact(_rowItem)
+					const rptRes = await registerStatusRptSunatApiFact(_rowItem)
+					console.log('rptRes', rptRes)
 				}
 			}			
 		}		
