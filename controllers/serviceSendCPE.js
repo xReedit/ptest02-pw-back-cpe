@@ -39,9 +39,9 @@ module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 
 const activarEnvioCpe = async function () {	
 	console.log('ingreso cocinar cpe')	
-	const minInterval = 120000; // cada 2min
-	const _timerLoop = setInterval(timerProcess, minInterval);
-	// loop_process_validacion();
+	// const minInterval = 120000; // cada 2min
+	// const _timerLoop = setInterval(timerProcess, minInterval);
+	loop_process_validacion();
 }
 module.exports.activarEnvioCpe = activarEnvioCpe;
 
@@ -54,13 +54,13 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('54 1,3,5 * * *', () => {		
+	cron.schedule('1 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('7 10,16,18,1,4 * * *', () => {		
+	cron.schedule('1 10,16,18,1,4 * * *', () => {		
 		console.log('Cocinando envio cpe', date_now.toLocaleDateString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
@@ -73,8 +73,8 @@ function loop_process_validacion() {
 		xLimpiarPrintDetalle();
 	});
 
-	// a las 4:35am ordena comercios con mas pedidos --app delivery
-	cron.schedule('35 4 * * 1', () => {		
+	// a las 4:35am de los lunes ordena comercios con mas pedidos --app delivery
+	cron.schedule('45 4 * * 1', () => {		
 		// comercios con mas pedidos app delivery
 		const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
 		emitirRespuesta(_sqlCountPedidos);
