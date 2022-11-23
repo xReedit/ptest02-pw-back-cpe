@@ -54,7 +54,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('27 1,3,5 * * *', () => {		
+	cron.schedule('31 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -146,6 +146,7 @@ async function runCPEApiSunat() {
 		const arr_numero = cpe.numero.split('-')
 		const serie = arr_numero[0];
 		const numero = parseInt(arr_numero[1]);
+		let rpt_c;
 		const _payload = {
 			"numRuc": cpe.ruc,
 			"codComp": cpe.codsunat,
@@ -158,7 +159,7 @@ async function runCPEApiSunat() {
 		// console.log('_payload', _payload)
 
 		try {
-		    const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
+		    rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
 		} catch (err) {
 		   continue;
 		}		
