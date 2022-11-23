@@ -226,7 +226,7 @@ async function runCPEApiSunat() {
 
 }
 
-function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat) {
+async function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat) {
 	// update apifact
 	const rptRes = await registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
 	console.log('res update apifact', rptRes)
