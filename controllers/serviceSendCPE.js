@@ -54,7 +54,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('7 4,3,5 * * *', () => {		
+	cron.schedule('1 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -230,9 +230,7 @@ async function runCPEApiSunat() {
 }
 
 async function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat) {
-	// update apifact	
-	listCpeOkRegisterApifac = {"list": JSON.stringify(listCpeOkRegisterApifac)}
-	console.log('JSON Envia apifact ==> ', listCpeOkRegisterApifac)
+	// update apifact		
 	const rptRes = await registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
 	console.log('res update apifact', rptRes)
 
@@ -351,21 +349,17 @@ async function registerStatusRptSunatApiFact(_list) {
 
 	const _urlCPEStatusSunat = URL_COMPROBANTE+ '/documents/setRptSunat';	
 	var _headers = HEADERS_COMPROBANTE;	
-	// _headers.Authorization = 'Bearer ' + cpe.token_api;
-
-	// const _playload = {
-	// 	user_id: cpe.user_id,
-	// 	external_id: cpe.external_id
-	// }
 
 	const _playload = {
 		list: JSON.stringify(_list)
 	}
 
+	consle.log('_playload apifact ', _playload)
+
 	return await fetch(_urlCPEStatusSunat, {
 			method: 'POST',
 			headers: _headers,
-			body:_playload
+			body:JSON.stringify(_playload)
 		}).then(res => res.json());
 }
 
