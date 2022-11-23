@@ -54,7 +54,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('5 2,3,5 * * *', () => {		
+	cron.schedule('35 2,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -140,7 +140,8 @@ async function runCPEApiSunat() {
 	let listCpeOkRegisterApifac = []
 	let countList = 0
 	let countIndex = 0
-	let countUpdateTocken = 0
+	let lengthList = listaComprobantes.length
+	let countUpdateTocken = 0	
 
 	for (const cpe of listaComprobantes) {
 		token_sunat = await verificarTokenApiSunat()
@@ -166,7 +167,7 @@ async function runCPEApiSunat() {
 		}		
 
 		
-		console.log('procesados', countIndex)
+		console.log('procesados' + countIndex + ' de ' + lengthList)
 		if ( rpt_c?.success === true ) { 			
 
 			// solo si tiene respuesta guarda
@@ -227,9 +228,11 @@ async function runCPEApiSunat() {
 
 function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat) {
 	// update apifact
-	registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
+	const rptRes = await registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
+	console.log('res update apifact', rptRes)
 	// update en bd-restobar
-	updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
+	const rptResResto = await updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
+	console.log('res update restobar', rptResResto)
 }
 
 
