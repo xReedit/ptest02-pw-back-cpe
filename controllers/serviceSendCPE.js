@@ -157,7 +157,11 @@ async function runCPEApiSunat() {
 
 		// console.log('_payload', _payload)
 
-		const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
+		try {
+		    const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
+		} catch (err) {
+		   continue;
+		}		
 
 		
 		console.log('rpt_c', rpt_c)
