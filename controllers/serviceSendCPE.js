@@ -138,6 +138,8 @@ async function runCPEApiSunat() {
 
 	let listCpeUpdateRegisterSunat = []
 	let listCpeOkRegisterApifac = []
+	let countList = 0
+	let countUpdateTocken = 0
 
 	for (const cpe of listaComprobantes) {
 		token_sunat = await verificarTokenApiSunat()
@@ -153,7 +155,7 @@ async function runCPEApiSunat() {
 			"monto": cpe.total
 		}
 
-		console.log('_payload', _payload)
+		// console.log('_payload', _payload)
 
 		const rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
 
@@ -175,23 +177,52 @@ async function runCPEApiSunat() {
 
 				// si fue aceptado lo guarda en apifact				
 				if (rpt_c.data.estadoCp === '1') {
-					// update apifact
+					// update apifact					
 					listCpeOkRegisterApifac.push(_rowItem)
 					// const rptRes = await registerStatusRptSunatApiFact(_rowItem)
 					// console.log('rptRes', rptRes)
 				}
 			}			
-		}		
+		}	
+
+		countList++;	
+		countUpdateTocken++;
+
+		// actualiza cada 100
+		if ( countList > 100 ) {
+			updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat)
+			listCpeOkRegisterApifac = []
+			listCpeUpdateRegisterSunat = []
+			countList = 0
+			console.log('enviado 100')
+		}
+
+		// cada 500 consultas actualiza token
+		if ( countUpdateTocken > 500 ) {
+			token_sunat = ''
+			token_sunat = await verificarTokenApiSunat(true)
+			countUpdateTocken=0
+			console.log('ratificar token')
+		}
 
 	}
 
+	updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat)
+
+	// // update apifact
+	// registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
+	// // update en bd-restobar
+	// updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
+
+	cocinandoValidezApiSunat = false;
+
+}
+
+function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat) {
 	// update apifact
 	registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
 	// update en bd-restobar
 	updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
-
-	cocinandoValidezApiSunat = false;
-
 }
 
 
@@ -244,7 +275,12 @@ async function updateStatusAllCpeRegisterSunat(listRegister) {
         await emitirRespuesta(sql_update);
 }
 
-const verificarTokenApiSunat = async () => {
+const verificarTokenApiSunat = async (update = false) => {
+	// si actualiza no mas
+	if ( update )  {
+		return await obtenerTokenApiSunat()
+	}
+
 	if ( token_sunat === '' ) {
 		return await obtenerTokenApiSunat()
 	} else {
@@ -293,7 +329,7 @@ async function updateStatusCpeValidacion(list) {
 
 async function registerStatusRptSunatApiFact(_list) {	
 	if ( _list.length === 0 ) return;
-	
+
 	const _urlCPEStatusSunat = URL_COMPROBANTE+ '/documents/setRptSunat';	
 	var _headers = HEADERS_COMPROBANTE;	
 	// _headers.Authorization = 'Bearer ' + cpe.token_api;
