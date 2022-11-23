@@ -56,6 +56,11 @@
         return fetch(_url, requestOptions)
           .then(response => response.json())
           // .then(result => console.log(result))
-          .catch(error => console.log('error', error));
+          .catch(error => {
+            return {
+                success: false,
+                error: error
+            }
+          });
     }
     module.exports.getConsulta = getConsulta;   

@@ -54,7 +54,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('31 1,3,5 * * *', () => {		
+	cron.schedule('5 2,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -139,6 +139,7 @@ async function runCPEApiSunat() {
 	let listCpeUpdateRegisterSunat = []
 	let listCpeOkRegisterApifac = []
 	let countList = 0
+	let countIndex = 0
 	let countUpdateTocken = 0
 
 	for (const cpe of listaComprobantes) {
@@ -165,8 +166,8 @@ async function runCPEApiSunat() {
 		}		
 
 		
-		console.log('rpt_c', rpt_c)
-		if ( rpt_c.success === true ) { 			
+		console.log('procesados', countIndex)
+		if ( rpt_c?.success === true ) { 			
 
 			// solo si tiene respuesta guarda
 			if (rpt_c.data?.estadoCp) {
@@ -192,6 +193,7 @@ async function runCPEApiSunat() {
 
 		countList++;	
 		countUpdateTocken++;
+		countIndex++;
 
 		// actualiza cada 100
 		if ( countList > 100 ) {
