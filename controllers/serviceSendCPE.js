@@ -54,7 +54,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('44 2,3,5 * * *', () => {		
+	cron.schedule('56 2,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
 		runCPEApiSunat()	  	
 	});
@@ -185,7 +185,7 @@ async function runCPEApiSunat() {
 				// si fue aceptado lo guarda en apifact				
 				if (rpt_c.data.estadoCp === '1') {
 					// update apifact					
-					listCpeOkRegisterApifac.push({idce: _rowItem.idce, external_id: _rowItem.external_id})
+					listCpeOkRegisterApifac.push({"idce": _rowItem.idce, "external_id": _rowItem.external_id})
 					// const rptRes = await registerStatusRptSunatApiFact(_rowItem)
 					// console.log('rptRes', rptRes)
 				}
@@ -227,13 +227,13 @@ async function runCPEApiSunat() {
 }
 
 async function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat) {
-	// update apifact
+	// update apifact	
+	listCpeOkRegisterApifac = {"list": listCpeOkRegisterApifac}
 	console.log('JSON Envia apifact ==> ', listCpeOkRegisterApifac)
 	const rptRes = await registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
 	console.log('res update apifact', rptRes)
 
 	// update en bd-restobar
-	console.log('JSON Envia Restobar ==> ', listCpeUpdateRegisterSunat)
 	const rptResResto = await updateStatusCpeValidacion(listCpeUpdateRegisterSunat)
 	console.log('res update restobar', rptResResto)
 }
@@ -318,10 +318,13 @@ async function updateStatusCpeValidacion(list) {
 
 	const _dateRegister = new Date().toLocaleDateString();
 	const _listAceptado = list.filter(x => x.estado === '1').map(x => x.idce)	
+
 	if ( _listAceptado.length > 0) {
 		sql_update = `update ce 
 	                set status_sunat = 1, status_sunat_date = '${_dateRegister}', 
 	                where idce in (${_listAceptado.join(',')})`;
+
+	        console.log('sql_update', sql_update)
 	        await emitirRespuesta(sql_update);
 	}
 	
