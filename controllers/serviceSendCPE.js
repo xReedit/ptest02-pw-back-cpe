@@ -354,7 +354,7 @@ async function registerStatusRptSunatApiFact(_list) {
 		list: JSON.stringify(_list)
 	}
 
-	consle.log('_playload apifact ', _playload)
+	console.log('_playload apifact ', _playload)
 
 	return await fetch(_urlCPEStatusSunat, {
 			method: 'POST',
