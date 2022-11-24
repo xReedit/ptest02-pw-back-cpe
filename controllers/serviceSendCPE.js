@@ -55,13 +55,13 @@ function loop_process_validacion() {
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
 	cron.schedule('1 1,3,5 * * *', () => {		
-		console.log('Cocinando validacion en api sunat ', date_now.toLocaleDateString());			
+		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
 		runCPEApiSunat()	  	
 	});
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
 	cron.schedule('1 10,16,18,1,4 * * *', () => {		
-		console.log('Cocinando envio cpe', date_now.toLocaleDateString());		
+		console.log('Cocinando envio cpe', date_now.toLocaleString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
 	});
@@ -69,7 +69,7 @@ function loop_process_validacion() {
 
 	// todos los diuas a l as 4:30 am
 	cron.schedule('30 4 * * *', () => {		
-		console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleDateString());		
+		console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleString());		
 		xLimpiarPrintDetalle();
 	});
 
