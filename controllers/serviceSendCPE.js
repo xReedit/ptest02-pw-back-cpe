@@ -54,13 +54,13 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('30 1,3,5 * * *', () => {		
+	cron.schedule('20 2,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
 		runCPEApiSunat()	  	
 	});
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('20 2,4,10,16,18 * * *', () => {		
+	cron.schedule('40 2,4,10,16,18 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
@@ -358,13 +358,18 @@ async function registerStatusRptSunatApiFact(_list) {
 		list: JSON.stringify(_list)
 	}
 
-	console.log('_playload apifact ', JSON.stringify(_playload))
+	console.log('_playload apifact ', _playload)
 
-	return await fetch(_urlCPEStatusSunat, {
+	try {
+		return await fetch(_urlCPEStatusSunat, {
 			method: 'POST',
 			headers: _headers,
 			body:JSON.stringify(_playload)
 		}).then(res => res.json());
+	} catch (err) {
+		console.log('error de json en llamada ', err)
+		return err
+	}
 }
 
 
