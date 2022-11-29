@@ -54,13 +54,13 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('20 2,3,5 * * *', () => {		
+	cron.schedule('1 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
 		runCPEApiSunat()	  	
 	});
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('40 2,4,10,16,18 * * *', () => {		
+	cron.schedule('20 2,4,10,16,18 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
@@ -92,6 +92,8 @@ const validarComprobanteElectronicos = async(req, res) => {
 
 	if ( listaComprobantes.length === 0 ) { cocinandoEnvioCPE = false; return }
 
+	console.log('listaComprobantes.length ', listaComprobantes.length)
+
 	let listCpeUpdateRegisterApifac = []
 	let listCpeUpdateRegisterSunat = []	
 	
@@ -101,6 +103,7 @@ const validarComprobanteElectronicos = async(req, res) => {
 	if ( listNoRegisterApiFact.length > 0 ) {
 		console.log('listNoRegisterApiFact.length ', listNoRegisterApiFact.length)
 		for (const cpe of listNoRegisterApiFact) {
+			console.log(cpe)
 			const rpt_c = await registerCpeApiFact(cpe)
 			if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
 			console.log('rpt_c ', rpt_c)
@@ -115,6 +118,7 @@ const validarComprobanteElectronicos = async(req, res) => {
 	if ( listNoRegisterSunat.length > 0 ) {
 		console.log('listNoRegisterSunat.length ', listNoRegisterSunat.length)
 		for (const cpe of listNoRegisterSunat) {
+			console.log(cpe)
 			const rpt_c = await sendCpeSunat(cpe)
 			if ( rpt_c.success ) { listCpeUpdateRegisterSunat.push(cpe.idce) }
 			console.log('rpt_c ', rpt_c)
