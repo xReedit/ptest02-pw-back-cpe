@@ -120,7 +120,10 @@ const validarComprobanteElectronicos = async(req, res) => {
 		for (const cpe of listNoRegisterSunat) {
 			console.log(cpe)
 			const rpt_c = await sendCpeSunat(cpe)
-			if ( rpt_c.success === true ) { listCpeUpdateRegisterSunat.push(cpe.idce) }
+			const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
+			const isSuccess = rpt_c.success;
+
+			if ( isSuccessResponse === true || isSuccess === true ) { listCpeUpdateRegisterSunat.push(cpe.idce) }
 			console.log('rpt_c ', rpt_c)
 		}
 	}
