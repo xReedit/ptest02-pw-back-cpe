@@ -19,7 +19,7 @@ routerV3.get('/', function (req, res, next) {
 // send facturacion cpe
 routerV3.get('/cpe/cocinar', apiServiceSendCPE.cocinarEnvioCPE);
 routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
-routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
+// routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
 
 
 // routerV3.get('/cpe/consulta-cpe', apiServiceSendCPE.obtenerToken);
