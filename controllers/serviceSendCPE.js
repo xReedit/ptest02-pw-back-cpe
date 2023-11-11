@@ -124,7 +124,9 @@ const validarComprobanteElectronicos = async(req, res) => {
 			const isSuccess = rpt_c.success;
 			// const isSuccesMaster = rpt_c.success || rpt_c.response;
 
-			if ( isSuccessResponse === true || isSuccess === true ) { listCpeUpdateRegisterSunat.push(cpe.idce) }
+			if ( isSuccessResponse === true || isSuccess === true ) { 
+				listCpeUpdateRegisterSunat.push(cpe.idce)
+			} 
 			console.log('rpt_c ', rpt_c)
 		}
 	}
@@ -334,7 +336,7 @@ async function updateStatusCpeValidacion(list) {
 
 	if ( _listAceptado.length > 0) {
 		sql_update = `update ce 
-	                set status_sunat = 1, status_sunat_date = '${_dateRegister}' 
+	                set estado_sunat = 0, msj='Aceptado.' status_sunat = 1, status_sunat_date = '${_dateRegister}' 
 	                where idce in (${_listAceptado.join(',')})`;
 
 	        console.log('sql_update', sql_update)
