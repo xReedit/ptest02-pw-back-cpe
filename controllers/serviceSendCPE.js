@@ -153,6 +153,16 @@ const validarComprobanteElectronicos = async(req, res) => {
 			if ( isSuccessResponse === true || isSuccess === true ) { 
 				listCpeUpdateRegisterSunat.push(cpe.idce)
 			} 
+
+			if ( isSuccessResponse == false ) {
+				// evaluea el error
+				const codError = rpt_c.response.code
+
+				// "El comprobante fue registrado previamente con otros datos"
+				if ( codError == '1033') {
+					listCpeUpdateRegisterSunat.push(cpe.idce)
+				}
+			}
 			console.log('rpt_c ', rpt_c)
 		}
 	}
