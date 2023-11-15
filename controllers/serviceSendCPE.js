@@ -57,14 +57,19 @@ module.exports.execRunCPEApiSunat = execRunCPEApiSunat;
 const emitirRespuesta = async (xquery) => {
     console.log(xquery);
     try {
-         const rows = await sequelize.query(xquery, { type: sequelize.QueryTypes.SELECT });
-         return ReS(res, {
-            data: rows
-        });
+         return await sequelize.query(xquery, { type: sequelize.QueryTypes.SELECT });
+
     } catch (err) {
         console.error(err);
         return false;
     }
+};
+
+
+
+const ejecutarQuery = async (query) => {
+    const resultado = await emitirRespuesta(query);
+    return resultado || [];
 };
 
 
@@ -236,16 +241,16 @@ async function runCPEApiSunat() {
 		countIndex++;
 
 		// actualiza cada 100
-		if ( countList > 100 ) {
+		if ( countList > 50 ) {
+			console.log('enviado 50')
 			updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat)
 			listCpeOkRegisterApifac = []
 			listCpeUpdateRegisterSunat = []
-			countList = 0
-			console.log('enviado 100')
+			countList = 0			
 		}
 
 		// cada 500 consultas actualiza token
-		if ( countUpdateTocken > 500 ) {
+		if ( countUpdateTocken > 500 ) {			
 			token_sunat = ''
 			token_sunat = await verificarTokenApiSunat(true)
 			countUpdateTocken=0
@@ -254,6 +259,7 @@ async function runCPEApiSunat() {
 
 	}
 
+	console.log('enviado en ', countList)
 	await updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat)
 
 	// // update apifact
@@ -365,8 +371,8 @@ async function updateStatusCpeValidacion(list) {
 	                where idce in (${_listAceptado.join(',')})`;
 
 	        console.log('sql_update _listAceptado', sql_update)
-	        rptConsult = await emitirRespuesta(sql_update);
-	        console.log('rptConsult', rptConsult)
+	        rptConsult = await emitirRespuesta_RES(sql_update);
+	        // console.log('rptConsult', rptConsult)
 	}
 	
 
@@ -380,8 +386,8 @@ async function updateStatusCpeValidacion(list) {
 	                set estado_sunat = 1, msj='Registrado', status_sunat_date = '${_dateRegister}' 
 	                where idce in (${_listNoExiste.join(',')})`;
 	        console.log('sql_update listNoExiste', sql_update)
-	        rptConsult = await emitirRespuesta(sql_update);
-	        console.log('rptConsult', rptConsult)
+	        rptConsult = await emitirRespuesta_RES(sql_update);
+	        // console.log('rptConsult', rptConsult)
 	}
 
 	return rptConsult;
