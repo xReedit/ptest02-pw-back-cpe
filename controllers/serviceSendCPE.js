@@ -45,6 +45,27 @@ const activarEnvioCpe = async function () {
 }
 module.exports.activarEnvioCpe = activarEnvioCpe;
 
+const execRunCPEApiSunat = async function () {	
+	console.log('ingreso cocinar runCPEApiSunat')	
+	// const minInterval = 120000; // cada 2min
+	// const _timerLoop = setInterval(timerProcess, minInterval);
+	runCPEApiSunat()
+}
+module.exports.execRunCPEApiSunat = execRunCPEApiSunat;
+
+
+const emitirRespuesta = async (xquery) => {
+    console.log(xquery);
+    try {
+         const rows = await sequelize.query(xquery, { type: sequelize.QueryTypes.SELECT });
+         return ReS(res, {
+            data: rows
+        });
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
+};
 
 
 
@@ -54,7 +75,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('1 1,3,5 * * *', () => {		
+	cron.schedule('1 1,3,5,11,17 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
 		runCPEApiSunat()	  	
 	});
@@ -180,8 +201,9 @@ async function runCPEApiSunat() {
 		   continue;
 		}		
 
-		
-		console.log('procesados' + countIndex + ' de ' + lengthList)
+
+		const _estadoCP = rpt_c.data?.estadoCp || 0;
+		console.log('procesados' + countIndex + ' de ' + lengthList, ' estado ' + _estadoCP)
 		if ( rpt_c?.success === true ) { 			
 
 			// solo si tiene respuesta guarda
@@ -232,7 +254,7 @@ async function runCPEApiSunat() {
 
 	}
 
-	updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat)
+	await updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegisterSunat)
 
 	// // update apifact
 	// registerStatusRptSunatApiFact(listCpeOkRegisterApifac)
@@ -332,15 +354,19 @@ async function updateStatusCpeValidacion(list) {
 	if ( list.length === 0 ) return false;
 
 	const _dateRegister = new Date().toLocaleDateString();
-	const _listAceptado = list.filter(x => x.estado === '1').map(x => x.idce)	
+	const _listAceptado = list.filter(x => x.estado == '1').map(x => x.idce)	
+	let rptConsult;
+
+	console.log('_dateRegister == ', _dateRegister);
 
 	if ( _listAceptado.length > 0) {
 		sql_update = `update ce 
 	                set estado_sunat = 0, msj='Aceptado.' status_sunat = 1, status_sunat_date = '${_dateRegister}' 
 	                where idce in (${_listAceptado.join(',')})`;
 
-	        console.log('sql_update', sql_update)
-	        await emitirRespuesta(sql_update);
+	        console.log('sql_update _listAceptado', sql_update)
+	        rptConsult = await emitirRespuesta(sql_update);
+	        console.log('rptConsult', rptConsult)
 	}
 	
 
@@ -348,13 +374,17 @@ async function updateStatusCpeValidacion(list) {
         // no creo que entre aca 
         // estado no existe en sunat
         // vuelve a colocar estado_sunat = 1 y msj=Registrado // para que vuelva intertar enviarlo
-	const _listNoExiste = list.filter(x => x.estado === '0').map(x => x.idce)
+	const _listNoExiste = list.filter(x => x.estado == '0').map(x => x.idce)
 	if ( _listNoExiste.length > 0 ) {
 		sql_update = `update ce 
-	                set estado_sunat = 1, msj='Registrado', status_sunat_date = '${_dateRegister}', 
+	                set estado_sunat = 1, msj='Registrado', status_sunat_date = '${_dateRegister}' 
 	                where idce in (${_listNoExiste.join(',')})`;
-	        await emitirRespuesta(sql_update);
+	        console.log('sql_update listNoExiste', sql_update)
+	        rptConsult = await emitirRespuesta(sql_update);
+	        console.log('rptConsult', rptConsult)
 	}
+
+	return rptConsult;
 	
 }
 
@@ -752,19 +782,22 @@ function xLimpiarPrintDetalle () {
 }
 
 
-function emitirRespuesta(xquery) {
-	return sequelize.query(xquery, {type: sequelize.QueryTypes.SELECT})
-	.then(function (rows) {
+
+
+// function emitirRespuesta(xquery) {
+// 	return sequelize.query(xquery, {type: sequelize.QueryTypes.SELECT})
+// 	.then(function (rows) {
 		
-		// return ReS(res, {
-		// 	data: rows
-		// });
-		return rows;
-	})
-	.catch((err) => {
-		return false;
-	});
-}
+// 		// return ReS(res, {
+// 		// 	data: rows
+// 		// });
+// 		return rows;
+// 	})
+// 	.catch((err) => {
+// 		return false;
+// 	});
+// }
+
 
 
 

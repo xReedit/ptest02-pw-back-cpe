@@ -8,7 +8,7 @@ const apiConsultaCPE = require('../controllers/apiConsultaValidezSunat');
 routerV3.get('/', function (req, res, next) {
 	res.json({
 		status: "success",
-		message: "API V3",
+		message: "API V3 CPE",
 		data: {
 			"version_number": "v1.0.0"
 		}
@@ -19,6 +19,8 @@ routerV3.get('/', function (req, res, next) {
 // send facturacion cpe
 routerV3.get('/cpe/cocinar', apiServiceSendCPE.cocinarEnvioCPE);
 routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
+routerV3.get('/cpe/cocinar-run-cpe-api-sunat', apiServiceSendCPE.execRunCPEApiSunat);
+
 // routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
 
 
