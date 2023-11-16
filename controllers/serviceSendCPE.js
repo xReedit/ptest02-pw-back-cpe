@@ -67,6 +67,18 @@ const emitirRespuesta = async (xquery) => {
     }
 };
 
+const emitirRespuestaSP = async (xquery) => {
+    console.log(xquery);
+    try {
+        const rows = await sequelize.query(xquery, { type: sequelize.QueryTypes.SELECT });
+        const arr = Object.values(rows[0]);
+        return arr;
+    } catch (err) {
+        console.error(err);
+        return false;
+    }
+};
+
 
 
 const ejecutarQuery = async (query) => {
@@ -758,7 +770,7 @@ async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 
     // }	
 
-    await emitirRespuesta(sql_update);
+    await emitirRespuestaSP(sql_update);
 }
 
 
@@ -869,3 +881,4 @@ function emitirRespuesta_RES(xquery) {
 		return false;
 	});
 }
+
