@@ -568,8 +568,8 @@ const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null
 			// sqlCpe = `select * from ce where idsede = ${idsede} and fecha = '${fecha_resumen}' and (estado=0 and anulado=0);`;
 			// listCpe = await emitirRespuesta(sqlCpe);		
 			numRowsCpe = listCpe.length;
-			list_cpe_nr = listCpe.filter(c => c.estado_sunat === 1);
-			console.log('falta registra en sunat estado_sunat 1 ===', list_cpe_nr)
+			list_cpe_nr = listCpe.filter(c => c.estado_sunat == 1);
+			console.log('falta registra en sunat estado_sunat 1 ===', list_cpe_nr.map(x => x.numero).join(','))
 			numRowListNR = list_cpe_nr.length;
 			if ( numRowListNR > 0 ) {
 				// enviamos al api
@@ -711,7 +711,10 @@ async function sendRetryOneCpe(_external_id, token) {
 // isNoRegistrado no registrado en api, si es false entonces son boletas de resumen que no pasaron
 async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 	console.log('rpt_cpe', rpt_cpe)
-	const isSuccess = rpt_cpe.success;
+	const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
+	const isSuccess = rpt_c.success;
+
+	// const isSuccess = rpt_cpe.success;
 	const isBoleta = el_cpe.numero.indexOf('B') > -1 ? true : false;
 	const _estadoSunat = isNoRegistrado ? isBoleta ? 1 : 0 : 0; // si es boleta aun no esta registrado lo mandaremos en resumen	 // si es envio de boletas del resumen si es correcto debe ir 0
 	const _mensaje = isSuccess ? isNoRegistrado ? isBoleta ? 'Registrado' : 'Aceptado' : 'Aceptado' : rpt_cpe.message;
@@ -721,24 +724,39 @@ async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 	const isRegistroPrevio = codeResponse == '1033' ?  true : false;
 	let sql_update = '';
 
-	if (isRegistroPrevio) {
+	if ( isSuccessResponse === true || isSuccess === true ) { 
+		
 		sql_update = `update ce 
-                set estado_api=0, estado_sunat=${_estadoSunat}, msj='Aceptado', 
-                pdf=1,xml=1,cdr=${_cdr}
-            where idce=${el_cpe.idce}`;
-    } else {
-
-       	if ( isSuccess) {
-			sql_update = `update ce 
 		    		set estado_api=0, estado_sunat=${_estadoSunat}, msj='${_mensaje}', 
 		            external_id='${rpt_cpe.data.external_id}',
 		            pdf=1,xml=1,cdr=${_cdr}
-		        where idce=${el_cpe.idce}`;
-		} else {
-			sql_update = `update ce set msj='${_mensaje}' where idce=${el_cpe.idce};`;
-		}
+		        where idce=${el_cpe.idce}`;		
+	} else {
 
-    }	
+		if ( isRegistroPrevio ) {
+			sql_update = `update ce 
+	                set estado_api=0, estado_sunat=${_estadoSunat}, msj='Aceptado', 
+	                pdf=1,xml=1,cdr=${_cdr}
+	            where idce=${el_cpe.idce}`;
+	    	}
+
+	}
+
+	 // else {
+
+    //    	if ( isSuccess) {
+// 			sql_update = `update ce 
+// 		    		set estado_api=0, estado_sunat=${_estadoSunat}, msj='${_mensaje}', 
+// 		            external_id='${rpt_cpe.data.external_id}',
+// 		            pdf=1,xml=1,cdr=${_cdr}
+// 		        where idce=${el_cpe.idce}`;
+// 		} 
+
+// 		// else {
+// 		// 	sql_update = `update ce set msj='${_mensaje}' where idce=${el_cpe.idce};`;
+// 		// }
+
+    // }	
 
     await emitirRespuesta(sql_update);
 }
