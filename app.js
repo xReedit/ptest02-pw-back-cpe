@@ -8,6 +8,8 @@ var cors=require('cors');
 var config = require('./config');
 const apiServiceSendCPE = require('./controllers/serviceSendCPE');
 
+let router = express.Router();
+
 app.use(cors());
 
 // app.use(bodyParser.json({ limit: '50mb' })); // soporte para bodies codificados en jsonsupport
@@ -15,9 +17,20 @@ app.use(cors());
 
 
 
+
 // para pwa-app-pedidos
 var appV3 = require('./routes/v3');
 app.use('/v3',appV3);
+
+app.get('/', function (req, res, next) {
+    res.json({
+        status: "success",
+        message: "API V3 CPE",
+        data: {
+            "version_number": "v1.0.0"
+        }
+    })
+});
 
 app.use(function(req, res, next) {
     var err = new Error('Not Found');
