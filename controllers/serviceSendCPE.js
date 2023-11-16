@@ -30,6 +30,7 @@ var runCountPedidos = false;
 var searchCpeByDate = null;
 
 const cocinarEnvioByFecha = async function (req, res) {
+	console.log(req.body)
 	searchCpeByDate = req.body.fecha;
 	idsede = req.body.idsede || null;
 	console.log('cocinar de fecha', searchCpeByDate);	

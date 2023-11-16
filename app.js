@@ -12,8 +12,8 @@ let router = express.Router();
 
 app.use(cors());
 
-// app.use(bodyParser.json({ limit: '50mb' })); // soporte para bodies codificados en jsonsupport
-// app.use(bodyParser.urlencoded({ extended: true, limit: '50mb', extended: true, parameterLimit: 50000 })); // soporte para bodies codificados
+app.use(bodyParser.json({ limit: '50mb' })); // soporte para bodies codificados en jsonsupport
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb', extended: true, parameterLimit: 50000 })); // soporte para bodies codificados
 
 
 
