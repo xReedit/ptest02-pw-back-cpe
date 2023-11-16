@@ -506,13 +506,14 @@ function timerProcess() {
 
 // se ejecuta a las 02:00 horas
 const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null) {
-	console.log('cocinarEnvioCPE');	
-	// obtener sedes con facturacion
+	console.log('cocinarEnvioCPE idsede_definida = ', idsede_definida);	
+	// obtener sedes con facturacion	
 	const lista_sedes = await getSedesCPE(idsede_definida);
 	console.log('lista_sedes', lista_sedes);
 
 	// fecha resumen	
 	const fecha_resumen = getFechaDiaAnterior(isDayHoy);
+	console.log('fecha_resumen ', fecha_resumen)
 
 	const countList = lista_sedes.length;
 	for (var i = countList - 1; i >= 0; i--) {
