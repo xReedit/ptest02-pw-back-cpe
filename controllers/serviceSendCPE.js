@@ -770,7 +770,7 @@ async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 
     // }	
 
-    await emitirRespuestaSP(sql_update);
+    await emitirRespuesta_RES(sql_update);
 }
 
 
