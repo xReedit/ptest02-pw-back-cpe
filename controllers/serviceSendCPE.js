@@ -711,8 +711,8 @@ async function sendRetryOneCpe(_external_id, token) {
 // isNoRegistrado no registrado en api, si es false entonces son boletas de resumen que no pasaron
 async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 	console.log('rpt_cpe', rpt_cpe)
-	const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
-	const isSuccess = rpt_c.success;
+	const isSuccessResponse = rpt_cpe.response ? rpt_cpe.response.success : false;
+	const isSuccess = rpt_cpe.success;
 
 	// const isSuccess = rpt_cpe.success;
 	const isBoleta = el_cpe.numero.indexOf('B') > -1 ? true : false;
