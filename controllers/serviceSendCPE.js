@@ -31,8 +31,9 @@ var searchCpeByDate = null;
 
 const cocinarEnvioByFecha = async function (req, res) {
 	searchCpeByDate = req.body.fecha;
+	idsede = req.body.idsede || null;
 	console.log('cocinar de fecha', searchCpeByDate);	
-	cocinarEnvioCPE();
+	cocinarEnvioCPE(false, idsede);
 }
 module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;	
 
@@ -78,33 +79,33 @@ const ejecutarQuery = async (query) => {
 function loop_process_validacion() {
 	const date_now = new Date();
 
-	console.log('ingresa a loops')
-	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('1 1,3,5,11,17 * * *', () => {		
-		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
-		runCPEApiSunat()	  	
-	});
+	// console.log('ingresa a loops')
+	// // todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
+	// cron.schedule('1 1,3,5,11,17 * * *', () => {		
+	// 	console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
+	// 	runCPEApiSunat()	  	
+	// });
 
-	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('20 2,4,10,16,18 * * *', () => {		
-		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
-		validarComprobanteElectronicos()	  	
-		// cocinarEnvioCPE(false);
-	});
+	// // 10,16,18,1,4hrs corre reenvio de comprobantes
+	// cron.schedule('20 2,4,10,16,18 * * *', () => {		
+	// 	console.log('Cocinando envio cpe ', date_now.toLocaleString());		
+	// 	validarComprobanteElectronicos()	  	
+	// 	// cocinarEnvioCPE(false);
+	// });
 
 
-	// todos los diuas a l as 4:30 am
-	cron.schedule('30 4 * * *', () => {		
-		console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleString());		
-		xLimpiarPrintDetalle();
-	});
+	// // todos los diuas a l as 4:30 am
+	// cron.schedule('30 4 * * *', () => {		
+	// 	console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleString());		
+	// 	xLimpiarPrintDetalle();
+	// });
 
-	// a las 4:35am de los lunes ordena comercios con mas pedidos --app delivery
-	cron.schedule('45 4 * * 1', () => {		
-		// comercios con mas pedidos app delivery
-		const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
-		emitirRespuesta(_sqlCountPedidos);
-	});	
+	// // a las 4:35am de los lunes ordena comercios con mas pedidos --app delivery
+	// cron.schedule('45 4 * * 1', () => {		
+	// 	// comercios con mas pedidos app delivery
+	// 	const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
+	// 	emitirRespuesta(_sqlCountPedidos);
+	// });	
 }
 
 
@@ -503,10 +504,10 @@ function timerProcess() {
 
 
 // se ejecuta a las 02:00 horas
-const cocinarEnvioCPE = async function (isDayHoy = false) {
+const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null) {
 	console.log('cocinarEnvioCPE');	
 	// obtener sedes con facturacion
-	const lista_sedes = await getSedesCPE();
+	const lista_sedes = await getSedesCPE(idsede_definida);
 	console.log('lista_sedes', lista_sedes);
 
 	// fecha resumen	
@@ -545,14 +546,17 @@ const cocinarEnvioCPE = async function (isDayHoy = false) {
 
 
 			// 3) creamos el resumen de boletas			
-		    // let rpt_resumen = await sendResumen(fecha_resumen, cpe_token);		
-		    // console.log('rpt_resumen', rpt_resumen)    
-		    // if (rpt_resumen.success) {
-		    // 	if ( rpt_resumen.tiket === null ) {// si es null intenta nuevamente
-		    // 		rpt_resumen = await sendResumen(fecha_resumen, cpe_token);		    
-		    // 	}
-		    // 	await saveResumen(idorg, idsede, fecha_resumen, rpt_resumen.data.external_id, rpt_resumen.data.ticket);
-		    // }
+		    let rpt_resumen = await sendResumen(fecha_resumen, cpe_token);		
+		    console.log('rpt_resumen', rpt_resumen)    
+		    if (rpt_resumen.success) {
+		    	if ( rpt_resumen.tiket === null ) {// si es null intenta nuevamente
+		    		rpt_resumen = await sendResumen(fecha_resumen, cpe_token);		    
+
+		    		if ( rpt_resumen.tiket !== null ) {
+		    			await saveResumen(idorg, idsede, fecha_resumen, rpt_resumen.data.external_id, rpt_resumen.data.ticket);
+		    		}
+		    	}		    	
+		    }
 
 
 		    // 4) enviamos (se envian uno por uno) solo facturas - los que fueron registrados pero no enviados a la sunat x problemas de conexion con el servicio. o offline
@@ -646,9 +650,11 @@ module.exports.cocinarRespuestaResumenCPE = cocinarRespuestaResumenCPE;
 
 
 
-async function getSedesCPE() {
+async function getSedesCPE(idsede_definida = null) {
+	const _idsede = idsede_definida ? ` and idsede=${idsede_definida} ` : '';
+
 	// pruebas solo san carlos y papaya express
-	const sql_sedes = "select idorg,idsede,nombre,ciudad, authorization_api_comprobante, id_api_comprobante from sede where facturacion_e_activo = 1 and estado=0 order by idsede asc";
+	const sql_sedes = `select idorg,idsede,nombre,ciudad, authorization_api_comprobante, id_api_comprobante from sede where facturacion_e_activo = 1 and estado=0 ${_idsede} order by idsede asc`;
 	return await emitirRespuesta(sql_sedes);
 }
 
@@ -708,7 +714,8 @@ async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 	const _mensaje = isSuccess ? isNoRegistrado ? isBoleta ? 'Registrado' : 'Aceptado' : 'Aceptado' : rpt_cpe.message;
 	const _cdr = isBoleta ? 0 : 1;
 	const _descripcionResponse = isSuccess ? rpt_cpe.response.description : rpt_cpe.message;
-	const isRegistroPrevio = _descripcionResponse ? _descripcionResponse.indexOf('ya se encuentra registrado') > -1 ? true : false : false;
+	const codeResponse = rpt_cpe.response ? rpt_cpe.response.code : '';
+	const isRegistroPrevio = codeResponse == '1033' ?  true : false;
 	let sql_update = '';
 
 	if (isRegistroPrevio) {

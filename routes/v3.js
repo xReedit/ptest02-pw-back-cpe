@@ -21,7 +21,6 @@ routerV3.get('/cpe/cocinar', apiServiceSendCPE.cocinarEnvioCPE);
 routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
 routerV3.get('/cpe/cocinar-run-cpe-api-sunat', apiServiceSendCPE.execRunCPEApiSunat);
 
-// routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
 
 
 // routerV3.get('/cpe/consulta-cpe', apiServiceSendCPE.obtenerToken);
