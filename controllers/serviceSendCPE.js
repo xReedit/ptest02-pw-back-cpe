@@ -569,6 +569,7 @@ const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null
 			// listCpe = await emitirRespuesta(sqlCpe);		
 			numRowsCpe = listCpe.length;
 			list_cpe_nr = listCpe.filter(c => c.estado_sunat === 1);
+			console.log('falta registra en sunat estado_sunat 1 ===', list_cpe_nr)
 			numRowListNR = list_cpe_nr.length;
 			if ( numRowListNR > 0 ) {
 				// enviamos al api
@@ -587,16 +588,16 @@ const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null
 
 
 	// revisa los resumens
-	cocinarRespuestaResumenCPE(isDayHoy);
+	cocinarRespuestaResumenCPE(isDayHoy, idsede_definida);
 
 }
 module.exports.cocinarEnvioCPE = cocinarEnvioCPE;	
 
 // se ejecuta a las 03:00 horas
-const cocinarRespuestaResumenCPE = async function (isDayHoy = false) {
+const cocinarRespuestaResumenCPE = async function (isDayHoy = false, idsede_definida = null) {
 	// obtener sedes con facturacion
 	console.log('cocinarRespuestaResumenCPE');
-	const lista_sedes = await getSedesCPE();
+	const lista_sedes = await getSedesCPE(idsede_definida);
 
 	// fecha resumen	
 	const fecha_resumen = getFechaDiaAnterior(isDayHoy);
