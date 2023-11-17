@@ -36,7 +36,16 @@ const cocinarEnvioByFecha = async function (req, res) {
 	console.log('cocinar de fecha', searchCpeByDate);	
 	cocinarEnvioCPE(false, idsede);
 }
-module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;	
+module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
+
+const cocinarEnvioByMes = async function (req, res) {
+	console.log(req.body)
+	searchCpeByMes = req.body.mes;
+	idsede = req.body.idsede || null;
+	console.log('cocinar mes ', searchCpeByMes);	
+	runCpeMonthSede(searchCpeByMes, idsede);
+}
+module.exports.cocinarEnvioByMes = cocinarEnvioByMes;	
 
 
 const activarEnvioCpe = async function () {	
@@ -87,6 +96,106 @@ const ejecutarQuery = async (query) => {
 };
 
 
+const runValidarComprobantesElectronicos = async(listaComprobantes, token_api = null) => {
+
+        console.log('listaComprobantes.length ', listaComprobantes.length)
+        if ( listaComprobantes.length === 0 ) { cocinandoEnvioCPE = false; return }
+
+        let listCpeUpdateRegisterApifac = []
+        let listCpeUpdateRegisterSunat = [] 
+        let listFechaResumen = []
+        
+        let registrosPorLote = 50;
+
+        // 1 todos los que no se registraron en el apifact        
+        const listNoRegisterApiFact = listaComprobantes.filter(c => c.estado_api.toString() === '1')
+        if ( listNoRegisterApiFact.length > 0 ) {
+            console.log('listNoRegisterApiFact.length ', listNoRegisterApiFact.length)
+
+            // Iterar sobre el array en lotes de 50 registros
+            for (let i = 0; i < listNoRegisterApiFact.length; i += registrosPorLote) {
+            // for (const cpe of listNoRegisterApiFact) {
+
+            	const lote = listNoRegisterApiFact.slice(i, i + registrosPorLote);            	
+
+            	listCpeUpdateRegisterApifac = [];
+            	for (const cpe of lote) {
+	                // console.log(cpe)
+
+	                // const _json_xml = cpe.json_xml;
+	                // const _token = token_api ? token_api : cpe.token_api;
+	                cpe.token_api = token_api ? token_api : cpe.token_api;
+	                const rpt_c = await sendOneCpe(cpe.json_xml, cpe.token_api)
+	                // const rpt_c = await registerCpeApiFact(cpe)
+	                sendOneCpe
+	                if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
+	                console.log('rpt_c ', rpt_c)
+		}
+
+		// 1.1 update a todos los comprobantes que se registraron en apifact
+        	await updateStatusAllCpeRegisterApiFact(listCpeUpdateRegisterApifac)
+            }
+        }
+
+
+
+        
+
+
+        // 2 todos los que no se registraron en la sunat
+        registrosPorLote = 50;
+        const listNoRegisterSunat = listaComprobantes.filter(c => c.estado_sunat.toString() === '1')
+        if ( listNoRegisterSunat.length > 0 ) {
+            console.log('listNoRegisterSunat.length ', listNoRegisterSunat.length)
+            
+            // Iterar sobre el array en lotes de 50 registros
+            for (let i = 0; i < listNoRegisterSunat.length; i += registrosPorLote) {
+            	    
+            	    const loteCPE = listNoRegisterSunat.slice(i, i + registrosPorLote);
+
+            	    listCpeUpdateRegisterSunat = [];
+	            for (const cpe of loteCPE) {
+	                console.log(cpe)
+	                cpe.token_api = token_api ? token_api : cpe.token_api;
+	                const rpt_c = await sendCpeSunat(cpe)           
+	                const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
+	                const isSuccess = rpt_c.success;
+	                // const isSuccesMaster = rpt_c.success || rpt_c.response;
+
+	                if ( isSuccessResponse === true || isSuccess === true ) { 
+	                    listCpeUpdateRegisterSunat.push(cpe.idce)
+	                } 
+
+	                if ( isSuccessResponse == false ) {
+	                    // evaluea el error
+	                	try {
+	                	    const codError = rpt_c.response.code;
+		                    // "El comprobante fue registrado previamente con otros datos"
+		                    if ( codError == '1033') {
+		                        listCpeUpdateRegisterSunat.push(cpe.idce);
+		                    }
+	                	} catch(e) {
+	                		console.error('No existe rpt_c.response.code');
+	                	}
+	                    
+	                }
+	                console.log('rpt_c ', rpt_c)
+	            }
+
+	        // 2.1 update a todos los comprobantes que se registraron en sunat
+	        await updateStatusAllCpeRegisterSunat(listCpeUpdateRegisterSunat);
+	        cocinandoEnvioCPE = false;
+	      }
+        }
+        // // 2.1 update a todos los comprobantes que se registraron en sunat
+        // await updateStatusAllCpeRegisterSunat(listCpeUpdateRegisterSunat);
+        // cocinandoEnvioCPE = false;
+
+        return true;
+
+}
+
+
 
 // 171122 procesos repetitivos
 function loop_process_validacion() {
@@ -122,6 +231,39 @@ function loop_process_validacion() {
 }
 
 
+//161123
+// function que envia comprobantes reenvia comprobantes de un determinado mes y sede
+const runCpeMonthSede = async(num_mes = null, idsede_definida = null) => {	
+	num_mes = num_mes ? num_mes : getNumMesActual();
+	console.log('runCpeMonthSede idsede_definida = ', idsede_definida);	
+	// obtener sedes con facturacion	
+	const lista_sedes = await getSedesCPE(idsede_definida);
+	console.log('lista_sedes', lista_sedes);
+
+	const countList = lista_sedes.length;	
+	for (var i = countList - 1; i >= 0; i--) {
+		const sede = lista_sedes[i];
+		const idsede = sede.idsede;
+		const idorg = sede.idorg;
+		
+		// credenciales
+		const cpe_token = sede.authorization_api_comprobante;
+		const cpe_userid = sede.id_api_comprobante;
+
+		var sqlCpe = `select * from ce WHERE idsede=${idsede} and MONTH(STR_TO_DATE(fecha, '%d/%m/%Y')) = ${num_mes} and (estado=0 and anulado=0) order by idce desc`;
+		var listCpe = await emitirRespuesta(sqlCpe);
+		var numRowsCpe = listCpe.length;
+		console.log('sqlCpe', sqlCpe);
+
+		await runValidarComprobantesElectronicos(listCpe, cpe_token);
+
+	}
+
+	return true;
+
+}
+
+
 // 171122
 // nuevo verificacion de comprobantes
 const validarComprobanteElectronicos = async(req, res) => {
@@ -130,60 +272,69 @@ const validarComprobanteElectronicos = async(req, res) => {
 	const sqlCpe = `call procedure_get_comprobantes_validez()`;
 	const listaComprobantes = await emitirRespuesta_RES(sqlCpe);
 
-	if ( listaComprobantes.length === 0 ) { cocinandoEnvioCPE = false; return }
-
-	console.log('listaComprobantes.length ', listaComprobantes.length)
-
-	let listCpeUpdateRegisterApifac = []
-	let listCpeUpdateRegisterSunat = []	
 	
 
-	// 1 todos los que no se registraron en el apifact
-	const listNoRegisterApiFact = listaComprobantes.filter(c => c.estado_api.toString() === '1')
-	if ( listNoRegisterApiFact.length > 0 ) {
-		console.log('listNoRegisterApiFact.length ', listNoRegisterApiFact.length)
-		for (const cpe of listNoRegisterApiFact) {
-			console.log(cpe)
-			const rpt_c = await registerCpeApiFact(cpe)
-			if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
-			console.log('rpt_c ', rpt_c)
-		}
-	}
-	// 1.1 update a todos los comprobantes que se registraron en apifact
-	await updateStatusAllCpeRegisterApiFact(listCpeUpdateRegisterApifac)
+	await runValidarComprobantesElectronicos(listaComprobantes);
 
 
-	// 2 todos los que no se registraron en la sunat
-	const listNoRegisterSunat = listaComprobantes.filter(c => c.estado_sunat.toString() === '1')
-	if ( listNoRegisterSunat.length > 0 ) {
-		console.log('listNoRegisterSunat.length ', listNoRegisterSunat.length)
-		for (const cpe of listNoRegisterSunat) {
-			console.log(cpe)
-			const rpt_c = await sendCpeSunat(cpe)			
-			const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
-			const isSuccess = rpt_c.success;
-			// const isSuccesMaster = rpt_c.success || rpt_c.response;
 
-			if ( isSuccessResponse === true || isSuccess === true ) { 
-				listCpeUpdateRegisterSunat.push(cpe.idce)
-			} 
+	// console.log('listaComprobantes.length ', listaComprobantes.length)
 
-			if ( isSuccessResponse == false ) {
-				// evaluea el error
-				const codError = rpt_c.response.code
+	// let listCpeUpdateRegisterApifac = []
+	// let listCpeUpdateRegisterSunat = []	
+	
 
-				// "El comprobante fue registrado previamente con otros datos"
-				if ( codError == '1033') {
-					listCpeUpdateRegisterSunat.push(cpe.idce)
-				}
-			}
-			console.log('rpt_c ', rpt_c)
-		}
-	}
-	// 2.1 update a todos los comprobantes que se registraron en sunat
-	await updateStatusAllCpeRegisterSunat(listCpeUpdateRegisterSunat)
+	// // 1 todos los que no se registraron en el apifact
+	// const listNoRegisterApiFact = listaComprobantes.filter(c => c.estado_api.toString() === '1')
+	// if ( listNoRegisterApiFact.length > 0 ) {
+	// 	console.log('listNoRegisterApiFact.length ', listNoRegisterApiFact.length)
+	// 	for (const cpe of listNoRegisterApiFact) {
+	// 		console.log(cpe)
 
-	cocinandoEnvioCPE = false;
+	// 		const _json_xml = cpe.json_xml;
+	// 		const _token = cpe.token_api;
+	// 		const rpt_c ? await sendOneCpe(cpe.json_xml, cpe.token_api)
+	// 		// const rpt_c = await registerCpeApiFact(cpe)
+	// 		sendOneCpe
+	// 		if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
+	// 		console.log('rpt_c ', rpt_c)
+	// 	}
+	// }
+	// // 1.1 update a todos los comprobantes que se registraron en apifact
+	// await updateStatusAllCpeRegisterApiFact(listCpeUpdateRegisterApifac)
+
+
+	// // 2 todos los que no se registraron en la sunat
+	// const listNoRegisterSunat = listaComprobantes.filter(c => c.estado_sunat.toString() === '1')
+	// if ( listNoRegisterSunat.length > 0 ) {
+	// 	console.log('listNoRegisterSunat.length ', listNoRegisterSunat.length)
+	// 	for (const cpe of listNoRegisterSunat) {
+	// 		console.log(cpe)
+	// 		const rpt_c = await sendCpeSunat(cpe)			
+	// 		const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
+	// 		const isSuccess = rpt_c.success;
+	// 		// const isSuccesMaster = rpt_c.success || rpt_c.response;
+
+	// 		if ( isSuccessResponse === true || isSuccess === true ) { 
+	// 			listCpeUpdateRegisterSunat.push(cpe.idce)
+	// 		} 
+
+	// 		if ( isSuccessResponse == false ) {
+	// 			// evaluea el error
+	// 			const codError = rpt_c.response.code
+
+	// 			// "El comprobante fue registrado previamente con otros datos"
+	// 			if ( codError == '1033') {
+	// 				listCpeUpdateRegisterSunat.push(cpe.idce)
+	// 			}
+	// 		}
+	// 		console.log('rpt_c ', rpt_c)
+	// 	}
+	// }
+	// // 2.1 update a todos los comprobantes que se registraron en sunat
+	// await updateStatusAllCpeRegisterSunat(listCpeUpdateRegisterSunat)
+
+	// cocinandoEnvioCPE = false;
 	
 	
 }
@@ -305,18 +456,25 @@ async function updateListRptSunat(listCpeOkRegisterApifac, listCpeUpdateRegister
 	console.log('res update restobar', rptResResto)
 }
 
-
+// el token viene incluido
 // registra el cpe en el apifact
 async function registerCpeApiFact(cpe) {	
-	const _urlEnvioCPE = URL_COMPROBANTE+ '/documents';	
-	var _headers = HEADERS_COMPROBANTE;	
-	_headers.Authorization = 'Bearer ' + cpe.token_api;
+	const _json_xml = cpe.json_xml;
+	const _token = cpe.token_api;
 
-	return await fetch(_urlEnvioCPE, {
-			method: 'POST',
-			headers: _headers,
-			body:cpe.json_xml
-		}).then(res => res.json());
+	return await sendOneCpe(_json_xml, _token)
+
+	// const _urlEnvioCPE = URL_COMPROBANTE+ '/documents';	
+	// var _headers = HEADERS_COMPROBANTE;	
+	// _headers.Authorization = 'Bearer ' + cpe.token_api;
+	// const _json_xml = cpe.json_xml;
+	// const _token = cpe.token_api;
+
+	// return await fetch(_urlEnvioCPE, {
+	// 		method: 'POST',
+	// 		headers: _headers,
+	// 		body:cpe.json_xml
+	// 	}).then(res => res.json());
 }
 
 // envia el cpe a la sunat
@@ -517,6 +675,7 @@ function timerProcess() {
 
 
 // se ejecuta a las 02:00 horas
+// solo una fecha envia resumenes de  boletas
 const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null) {
 	console.log('cocinarEnvioCPE idsede_definida = ', idsede_definida);	
 	// obtener sedes con facturacion	
@@ -543,6 +702,8 @@ const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null
 		var numRowsCpe = listCpe.length;
 		console.log('sqlCpe', sqlCpe);
 		// console.log('listCpe', listCpe);
+
+
 
 		if ( numRowsCpe > 0 ) { // si hay comprobantes
 
@@ -839,6 +1000,10 @@ function xLimpiarPrintDetalle () {
 
 
 
+function getNumMesActual() {
+	const fechaActual = new Date();
+	return fechaActual.getMonth() + 1;
+}
 
 // function emitirRespuesta(xquery) {
 // 	return sequelize.query(xquery, {type: sequelize.QueryTypes.SELECT})
