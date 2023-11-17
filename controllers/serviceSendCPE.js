@@ -127,8 +127,7 @@ const runValidarComprobantesElectronicos = async(listaComprobantes, token_api = 
 	                // const _token = token_api ? token_api : cpe.token_api;
 	                cpe.token_api = token_api ? token_api : cpe.token_api;
 	                const rpt_c = await sendOneCpe(cpe.json_xml, cpe.token_api)
-	                // const rpt_c = await registerCpeApiFact(cpe)
-	                sendOneCpe
+	                // const rpt_c = await registerCpeApiFact(cpe)	                
 	                if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
 	                console.log('rpt_c ', rpt_c)
 		}
@@ -155,8 +154,7 @@ const runValidarComprobantesElectronicos = async(listaComprobantes, token_api = 
             	    const loteCPE = listNoRegisterSunat.slice(i, i + registrosPorLote);
 
             	    listCpeUpdateRegisterSunat = [];
-	            for (const cpe of loteCPE) {
-	                console.log(cpe)
+	            for (const cpe of loteCPE) {	                
 	                cpe.token_api = token_api ? token_api : cpe.token_api;
 	                const rpt_c = await sendCpeSunat(cpe)           
 	                const isSuccessResponse = rpt_c.response ? rpt_c.response.success : false;
