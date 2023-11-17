@@ -201,33 +201,45 @@ const runValidarComprobantesElectronicos = async(listaComprobantes, token_api = 
 function loop_process_validacion() {
 	const date_now = new Date();
 
-	// console.log('ingresa a loops')
-	// // todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	// cron.schedule('1 1,3,5,11,17 * * *', () => {		
-	// 	console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
-	// 	runCPEApiSunat()	  	
-	// });
+	console.log('ingresa a loops')
+	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
+	cron.schedule('1 1,3,5,11,17 * * *', () => {		
+		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
+		runCPEApiSunat()	  	
+	});
 
-	// // 10,16,18,1,4hrs corre reenvio de comprobantes
-	// cron.schedule('20 2,4,10,16,18 * * *', () => {		
-	// 	console.log('Cocinando envio cpe ', date_now.toLocaleString());		
-	// 	validarComprobanteElectronicos()	  	
-	// 	// cocinarEnvioCPE(false);
-	// });
+	// 10,16,18,1,4hrs corre reenvio de comprobantes
+	cron.schedule('20 2,4,10,16,18 * * *', () => {		
+		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
+		validarComprobanteElectronicos()	  	
+		// cocinarEnvioCPE(false);
+	});
+
+	// 10,16,18,1,4hrs corre reenvio de comprobantes y resumenes
+	cron.schedule('55 2,4,10,16,18 * * *', () => {		
+		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
+		// validarComprobanteElectronicos()	  	
+		cocinarEnvioCPE();
+	});
+
+	// los bad request pasar nuevamente
+	cron.schedule('0 2 * * *', () => {
+		xCleanBadRequest();
+	})
 
 
-	// // todos los diuas a l as 4:30 am
-	// cron.schedule('30 4 * * *', () => {		
-	// 	console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleString());		
-	// 	xLimpiarPrintDetalle();
-	// });
+	// todos los diuas a l as 4:30 am
+	cron.schedule('30 4 * * *', () => {		
+		console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleString());		
+		xLimpiarPrintDetalle();
+	});
 
-	// // a las 4:35am de los lunes ordena comercios con mas pedidos --app delivery
-	// cron.schedule('45 4 * * 1', () => {		
-	// 	// comercios con mas pedidos app delivery
-	// 	const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
-	// 	emitirRespuesta(_sqlCountPedidos);
-	// });	
+	// a las 4:35am de los lunes ordena comercios con mas pedidos --app delivery
+	cron.schedule('45 4 * * 1', () => {		
+		// comercios con mas pedidos app delivery
+		const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
+		emitirRespuesta(_sqlCountPedidos);
+	});	
 }
 
 
@@ -955,7 +967,7 @@ async function sendResumen(fecha_resumen, token) {
 async function saveResumen(idorg, idsede, fecha_resumen, external_id, tiket ) {
 	const sql_resumen =`call procedure_register_resumen_cpe(${idorg}, ${idsede}, '${fecha_resumen.split('/').reverse().join('-')}', '${external_id}', '${tiket}');`
 	console.log('saveResumen', sql_resumen)
-	await emitirRespuesta(sql_resumen);
+	await emitirRespuesta_RES(sql_resumen);
 }
 
 
@@ -998,6 +1010,10 @@ function xLimpiarPrintDetalle () {
 	emitirRespuesta(sql);	
 }
 
+function xCleanBadRequest() {
+	const sql = `UPDATE ce set estado_sunat=1 where estado=0 and anulado=0 and msj = 'Bad Gateway'`;
+	emitirRespuesta(sql);
+}
 
 
 function getNumMesActual() {
