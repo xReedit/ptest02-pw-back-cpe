@@ -203,7 +203,7 @@ function loop_process_validacion() {
 
 	console.log('ingresa a loops')
 	// todos los dias en el minuto 1 pasada las 1,3,5hrs corre proceso validacion api sunat
-	cron.schedule('1 1,3,5,11,17 * * *', () => {		
+	cron.schedule('1 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
 		runCPEApiSunat()	  	
 	});
@@ -574,7 +574,7 @@ async function updateStatusCpeValidacion(list) {
         // no creo que entre aca 
         // estado no existe en sunat
         // vuelve a colocar estado_sunat = 1 y msj=Registrado // para que vuelva intertar enviarlo
-        
+
 	// const _listNoExiste = list.filter(x => x.estado == '0').map(x => x.idce)
 	// if ( _listNoExiste.length > 0 ) {
 	// 	sql_update = `update ce 
