@@ -1013,7 +1013,7 @@ function xLimpiarPrintDetalle () {
 
 function xCleanBadRequest() {
 	const sql = `UPDATE ce set estado_sunat=1 where estado=0 and anulado=0 and msj = 'Bad Gateway'`;
-	emitirRespuesta(sql);
+	emitirRespuesta_RES(sql);
 }
 
 
