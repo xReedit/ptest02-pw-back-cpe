@@ -39,6 +39,7 @@ const cocinarEnvioByFecha = async function (req, res) {
 module.exports.cocinarEnvioByFecha = cocinarEnvioByFecha;
 
 const cocinarEnvioByMes = async function (req, res) {
+	console.log('ingreso cocinarEnvioByMes')	
 	console.log(req.body)
 	searchCpeByMes = req.body.mes;
 	idsede = req.body.idsede || null;
@@ -501,7 +502,7 @@ async function updateStatusAllCpeRegisterApiFact(listRegister) {
 	sql_update = `update ce 
                 set estado_api=0, msj='Registrado', 
                 pdf=1,xml=1,cdr=0 where idce in (${listRegister.join(',')})`;
-        await emitirRespuesta(sql_update);
+        await emitirRespuesta_RES(sql_update);
 }
 
 async function updateStatusAllCpeRegisterSunat(listRegister) {
@@ -510,7 +511,7 @@ async function updateStatusAllCpeRegisterSunat(listRegister) {
 	sql_update = `update ce 
                 set estado_sunat=0, msj='Aceptado', 
                 cdr=1 where idce in (${listRegister.join(',')})`;
-        await emitirRespuesta(sql_update);
+        await emitirRespuesta_RES(sql_update);
 }
 
 const verificarTokenApiSunat = async (update = false) => {

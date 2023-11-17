@@ -20,7 +20,7 @@ routerV3.get('/', function (req, res, next) {
 routerV3.get('/cpe/cocinar', apiServiceSendCPE.cocinarEnvioCPE);
 routerV3.post('/cpe/cocinar-by-fecha', apiServiceSendCPE.cocinarEnvioByFecha);
 routerV3.post('/cpe/cocinar-by-mes', apiServiceSendCPE.cocinarEnvioByMes);
-routerV3.post('/cpe/cocinar-by-fecha-api-sunat', apiServiceSendCPE.cocinarEnvioByFecha);
+// routerV3.post('/cpe/cocinar-by-fecha-api-sunat', apiServiceSendCPE.cocinarEnvioByFecha);
 routerV3.get('/cpe/cocinar-run-cpe-api-sunat', apiServiceSendCPE.execRunCPEApiSunat);
 
 
