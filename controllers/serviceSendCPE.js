@@ -190,6 +190,7 @@ const runValidarComprobantesElectronicos = async(listaComprobantes, token_api = 
         // await updateStatusAllCpeRegisterSunat(listCpeUpdateRegisterSunat);
         // cocinandoEnvioCPE = false;
 
+        console.log('=== termino ===')
         return true;
 
 }
