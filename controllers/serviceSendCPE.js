@@ -385,7 +385,7 @@ async function runCPEApiSunat() {
 			"monto": cpe.total
 		}
 
-		// console.log('_payload', _payload)
+		console.log('_payload', _payload)
 
 		try {
 		    rpt_c = await apiConsultaSunatCPE.getConsulta(token_sunat, _payload)
@@ -574,15 +574,16 @@ async function updateStatusCpeValidacion(list) {
         // no creo que entre aca 
         // estado no existe en sunat
         // vuelve a colocar estado_sunat = 1 y msj=Registrado // para que vuelva intertar enviarlo
-	const _listNoExiste = list.filter(x => x.estado == '0').map(x => x.idce)
-	if ( _listNoExiste.length > 0 ) {
-		sql_update = `update ce 
-	                set estado_sunat = 1, msj='Registrado', status_sunat_date = '${_dateRegister}' 
-	                where idce in (${_listNoExiste.join(',')})`;
-	        console.log('sql_update listNoExiste', sql_update)
-	        rptConsult = await emitirRespuesta_RES(sql_update);
-	        // console.log('rptConsult', rptConsult)
-	}
+        
+	// const _listNoExiste = list.filter(x => x.estado == '0').map(x => x.idce)
+	// if ( _listNoExiste.length > 0 ) {
+	// 	sql_update = `update ce 
+	//                 set estado_sunat = 1, msj='Registrado', status_sunat_date = '${_dateRegister}' 
+	//                 where idce in (${_listNoExiste.join(',')})`;
+	//         console.log('sql_update listNoExiste', sql_update)
+	//         rptConsult = await emitirRespuesta_RES(sql_update);
+	//         // console.log('rptConsult', rptConsult)
+	// }
 
 	return rptConsult;
 	
