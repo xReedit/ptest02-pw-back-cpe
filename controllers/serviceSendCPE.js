@@ -130,11 +130,14 @@ const runValidarComprobantesElectronicos = async(listaComprobantes, token_api = 
 	                // const rpt_c = await registerCpeApiFact(cpe)	                
 	                if ( rpt_c.success ) { listCpeUpdateRegisterApifac.push(cpe.idce) }
 	                console.log('rpt_c ', rpt_c)
-		}
+				}
 
-		// 1.1 update a todos los comprobantes que se registraron en apifact
-        	await updateStatusAllCpeRegisterApiFact(listCpeUpdateRegisterApifac)
-            }
+				// 1.1 update a todos los comprobantes que se registraron en apifact
+				console.log('updateStatusAllCpeRegisterApiFact === ');
+
+	        	await updateStatusAllCpeRegisterApiFact(listCpeUpdateRegisterApifac)
+        	}
+            
         }
 
 
