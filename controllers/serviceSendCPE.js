@@ -851,8 +851,15 @@ async function getSedesCPE(idsede_definida = null) {
 }
 
 function getFechaDiaAnterior(isDayHoy = false) {
-	const fechaDefault = searchCpeByDate;
-	const fechaNow = fechaDefault ? new Date(fechaDefault) : new Date();
+	console.log(searchCpeByDate)
+	let fechasearchCpeByDate;
+	if ( searchCpeByDate ) {
+		const [mes, dia, anio] = searchCpeByDate.split('/');
+		fechasearchCpeByDate = new Date(`${anio}-${mes}-${dia}`);
+	}
+
+	let  fechaDefault = searchCpeByDate;		
+	const fechaNow = fechaDefault ? fechasearchCpeByDate : new Date();
 	var fecha_resumen = fechaDefault ? fechaNow : new Date(fechaNow.setDate(fechaNow.getDate() - 1)); // produccion
 	if ( isDayHoy == true ) {
 		fecha_resumen = new Date();
