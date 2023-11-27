@@ -700,7 +700,9 @@ const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null
 
 	// fecha resumen	
 	const fecha_resumen = getFechaDiaAnterior(isDayHoy);
+	const fecha_resumen_ce = fecha_resumen.split('-').reverse().join('/')
 	console.log('fecha_resumen ', fecha_resumen)
+	console.log('fecha_resumen_ce', fecha_resumen_ce)
 
 	const countList = lista_sedes.length;
 	for (var i = countList - 1; i >= 0; i--) {
@@ -713,7 +715,7 @@ const cocinarEnvioCPE = async function (isDayHoy = false, idsede_definida = null
 		const cpe_userid = sede.id_api_comprobante;
 
 		// 1) verificamos si hay comprobantes emitidos en la fecha resumen
-		var sqlCpe = `select * from ce where idsede = ${idsede} and fecha = '${fecha_resumen}' and (estado=0 and anulado=0);`;
+		var sqlCpe = `select * from ce where idsede = ${idsede} and fecha = '${fecha_resumen_ce}' and (estado=0 and anulado=0);`;
 		var listCpe = await emitirRespuesta(sqlCpe);		
 		var numRowsCpe = listCpe.length;
 		console.log('sqlCpe', sqlCpe);
@@ -851,26 +853,28 @@ async function getSedesCPE(idsede_definida = null) {
 }
 
 function getFechaDiaAnterior(isDayHoy = false) {
-	console.log(searchCpeByDate)
+	// console.log(searchCpeByDate)
 	let fechasearchCpeByDate;
 	if ( searchCpeByDate ) {
-		const [mes, dia, anio] = searchCpeByDate.split('/');
+		const [dia, mes, anio] = searchCpeByDate.split('/');
 		fechasearchCpeByDate = new Date(`${anio}-${mes}-${dia}`);
+		// console.log(fechasearchCpeByDate)
 	}
 
 	let  fechaDefault = searchCpeByDate;		
 	const fechaNow = fechaDefault ? fechasearchCpeByDate : new Date();
+	// console.log('fechaNow', fechaNow)
 	var fecha_resumen = fechaDefault ? fechaNow : new Date(fechaNow.setDate(fechaNow.getDate() - 1)); // produccion
 	if ( isDayHoy == true ) {
 		fecha_resumen = new Date();
 	}
 	// const fecha_resumen = new Date(fechaNow.setDate(fechaNow.getDate())); // desarrollo
-	console.log(fecha_resumen);
+	// console.log(fecha_resumen);
 	const anio = fecha_resumen.getFullYear();
 	const mes = (fecha_resumen.getMonth() + 1).toString().padStart(2, '0');
-	const dia = fecha_resumen.getDate().toString().padStart(2, '0');
+	const dia = (fecha_resumen.getDate() + 1).toString().padStart(2, '0');
 
-	console.log(`${anio}-${mes}-${dia}`)
+	// console.log(`${anio}-${mes}-${dia}`)
 
 	// return fecha_resumen.toJSON().slice(0, 10).split('-').reverse().join('/');
 	return `${anio}-${mes}-${dia}`;
