@@ -858,11 +858,13 @@ function getFechaDiaAnterior(isDayHoy = false) {
 		fecha_resumen = new Date();
 	}
 	// const fecha_resumen = new Date(fechaNow.setDate(fechaNow.getDate())); // desarrollo
-	const [dia, mes, anio] = cadenaFecha.split('/');
-	const nuevaFecha = `${anio}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+	const anio = fechaNow.getFullYear();
+	const mes = (fechaNow.getMonth() + 1).toString().padStart(2, '0');
+	const dia = fechaNow.getDate().toString().padStart(2, '0');
+
 
 	// return fecha_resumen.toJSON().slice(0, 10).split('-').reverse().join('/');
-	return nuevaFecha;
+	return `${anio}-${mes}-${dia}`;
 }
 
 async function getBoletasResumenError(fecha_resumen) {
