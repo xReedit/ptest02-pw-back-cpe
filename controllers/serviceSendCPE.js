@@ -858,6 +858,7 @@ function getFechaDiaAnterior(isDayHoy = false) {
 		fecha_resumen = new Date();
 	}
 	// const fecha_resumen = new Date(fechaNow.setDate(fechaNow.getDate())); // desarrollo
+	console.log(fecha_resumen);
 	const anio = fecha_resumen.getFullYear();
 	const mes = (fecha_resumen.getMonth() + 1).toString().padStart(2, '0');
 	const dia = fecha_resumen.getDate().toString().padStart(2, '0');
