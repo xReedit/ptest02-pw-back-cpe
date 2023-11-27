@@ -862,6 +862,7 @@ function getFechaDiaAnterior(isDayHoy = false) {
 	const mes = (fechaNow.getMonth() + 1).toString().padStart(2, '0');
 	const dia = fechaNow.getDate().toString().padStart(2, '0');
 
+	console.log(`${anio}-${mes}-${dia}`)
 
 	// return fecha_resumen.toJSON().slice(0, 10).split('-').reverse().join('/');
 	return `${anio}-${mes}-${dia}`;
