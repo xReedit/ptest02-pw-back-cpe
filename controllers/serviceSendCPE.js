@@ -212,14 +212,14 @@ function loop_process_validacion() {
 	});
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('20 2,4,10,16,18 * * *', () => {		
+	cron.schedule('20 2,4,10,16 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
 	});
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes y resumenes
-	cron.schedule('55 2,4,10,16,18 * * *', () => {		
+	cron.schedule('55 2,4,10,16 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		// validarComprobanteElectronicos()	  	
 		cocinarEnvioCPE();
