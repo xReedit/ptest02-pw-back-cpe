@@ -209,40 +209,40 @@ function loop_process_validacion() {
 	cron.schedule('1 1,3,5 * * *', () => {		
 		console.log('Cocinando validacion en api sunat ', date_now.toLocaleString());			
 		runCPEApiSunat()	  	
-	});
+	}, null, true, 'America/Lima');;
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('20 2,4,10,16 * * *', () => {		
+	cron.schedule('20 2,4,9,16 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
-	});
+	}, null, true, 'America/Lima');;
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes y resumenes
-	cron.schedule('55 2,4,10,16 * * *', () => {		
+	cron.schedule('55 2,4,9,16 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		// validarComprobanteElectronicos()	  	
 		cocinarEnvioCPE();
-	});
+	}, null, true, 'America/Lima');;
 
 	// los bad request pasar nuevamente
 	cron.schedule('0 2 * * *', () => {
 		xCleanBadRequest();
-	})
+	}, null, true, 'America/Lima');
 
 
 	// todos los diuas a l as 4:30 am
 	cron.schedule('30 4 * * *', () => {		
 		console.log('Borra todo los print detalle y cuadres anteriores', date_now.toLocaleString());		
 		xLimpiarPrintDetalle();
-	});
+	}, null, true, 'America/Lima');;
 
 	// a las 4:35am de los lunes ordena comercios con mas pedidos --app delivery
 	cron.schedule('45 4 * * 1', () => {		
 		// comercios con mas pedidos app delivery
 		const _sqlCountPedidos = 'call procedure_count_pedidos_delivery_sede()';
 		emitirRespuesta(_sqlCountPedidos);
-	});	
+	}, null, true, 'America/Lima');;	
 }
 
 
