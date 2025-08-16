@@ -50,7 +50,8 @@
           method: 'POST',
           headers: myHeaders,
           body: raw,
-          redirect: 'follow'
+          redirect: 'follow',
+          timeout: 20000 // 20 segundos
         };
 
         return fetch(_url, requestOptions)

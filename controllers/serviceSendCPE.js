@@ -8,8 +8,69 @@ let config = require('../config');
 const apiConsultaSunatCPE = require('../controllers/apiConsultaValidezSunat');
 // let managerFilter = require('../utilitarios/filters');
 
-const fetch = require("node-fetch");
+const axios = require("axios");
 const cron = require('node-cron');
+
+// Función centralizada para manejar todas las peticiones HTTP con axios
+async function fetchAxios(url, method, headers, body, timeout = 30000) {
+    try {
+        const config = {
+            method: method,
+            url: url,
+            headers: headers,
+            timeout: timeout, // 30 segundos por defecto
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
+        };
+        
+        // Si hay body, lo procesamos según su tipo
+        if (body) {
+            if (method.toUpperCase() === 'GET') {
+                config.params = body;
+            } else {
+                // Si es string, asumimos que ya está formateado (XML o JSON string)
+                if (typeof body === 'string') {
+                    // Verificamos si parece JSON
+                    if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
+                        try {
+                            // Intentamos parsearlo como JSON
+                            const jsonData = JSON.parse(body);
+                            config.data = jsonData;
+                            // Aseguramos que el header Content-Type sea application/json
+                            config.headers = { ...config.headers, 'Content-Type': 'application/json' };
+                        } catch (e) {
+                            // Si falla el parse, lo enviamos como string
+                            config.data = body;
+                        }
+                    } else {
+                        // Si no parece JSON, lo enviamos como está (probablemente XML)
+                        config.data = body;
+                    }
+                } else {
+                    // Si es un objeto, lo enviamos como JSON
+                    config.data = body;
+                    // Aseguramos que el header Content-Type sea application/json
+                    config.headers = { ...config.headers, 'Content-Type': 'application/json' };
+                }
+            }
+        }
+        
+        console.log(`Enviando petición a ${url} con método ${method}`);
+        const response = await axios(config);
+        return response.data;
+    } catch (error) {
+        console.error(`Error en fetchAxios (${url}):`, error.message);
+        // Si hay timeout, lo indicamos claramente
+        if (error.code === 'ECONNABORTED') {
+            console.error('La petición excedió el tiempo de espera (timeout):', timeout, 'ms');
+        }
+        return { 
+            success: false, 
+            message: error.message || 'Error en la petición', 
+            error: error.response ? error.response.data : error.message 
+        };
+    }
+}
 
 // var FormData = require('form-data');
 let url_restobar = config.URL_RESTOBAR;
@@ -212,14 +273,14 @@ function loop_process_validacion() {
 	}, null, true, 'America/Lima');;
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes
-	cron.schedule('20 2,4,9,16 * * *', () => {		
+	cron.schedule('20 2,4,9 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		validarComprobanteElectronicos()	  	
 		// cocinarEnvioCPE(false);
 	}, null, true, 'America/Lima');;
 
 	// 10,16,18,1,4hrs corre reenvio de comprobantes y resumenes
-	cron.schedule('55 2,4,9,16 * * *', () => {		
+	cron.schedule('55 2,4,9 * * *', () => {		
 		console.log('Cocinando envio cpe ', date_now.toLocaleString());		
 		// validarComprobanteElectronicos()	  	
 		cocinarEnvioCPE();
@@ -493,20 +554,15 @@ async function registerCpeApiFact(cpe) {
 }
 
 // envia el cpe a la sunat
-async function sendCpeSunat(cpe) {	
-	const _urlEnvioRetryCPE = URL_COMPROBANTE+ '/send';	
-	var _headers = HEADERS_COMPROBANTE;	
-	_headers.Authorization = 'Bearer ' + cpe.token_api;
+async function sendCpeSunat(cpe) {
+	const _urlEnvioRetryCPE = URL_COMPROBANTE+ '/send';
+	const _headers = { ...HEADERS_COMPROBANTE, 'Authorization': 'Bearer ' + cpe.token_api };
 
 	const _json = {
         "external_id": cpe.external_id
-    }
+    };
 
-	return await fetch(_urlEnvioRetryCPE, {
-			method: 'POST',
-			headers: _headers,
-			body: JSON.stringify(_json)
-		}).then(res => res.json());
+	return await fetchAxios(_urlEnvioRetryCPE, 'POST', _headers, _json);
 }
 
 
@@ -592,28 +648,19 @@ async function updateStatusCpeValidacion(list) {
 	
 }
 
-async function registerStatusRptSunatApiFact(_list) {	
+async function registerStatusRptSunatApiFact(_list) {
 	if ( _list.length === 0 ) return;
 
-	const _urlCPEStatusSunat = URL_COMPROBANTE+ '/documents/setRptSunat';	
-	var _headers = HEADERS_COMPROBANTE;	
+	const _urlCPEStatusSunat = URL_COMPROBANTE+ '/documents/setRptSunat';
+	const _headers = HEADERS_COMPROBANTE;
 
 	const _playload = {
 		list: JSON.stringify(_list)
-	}
+	};
 
-	console.log('_playload apifact ', _playload)
+	console.log('_playload apifact ', _playload);
 
-	try {
-		return await fetch(_urlCPEStatusSunat, {
-			method: 'POST',
-			headers: _headers,
-			body:JSON.stringify(_playload)
-		}).then(res => res.json());
-	} catch (err) {
-		console.log('error de json en llamada ', err)
-		return err
-	}
+	return await fetchAxios(_urlCPEStatusSunat, 'POST', _headers, _playload);
 }
 
 
@@ -888,32 +935,28 @@ async function getBoletasResumenError(fecha_resumen) {
 
 
 ///
-async function sendOneCpe(json_xml, token) {	
-	const _urlEnvioCPE = URL_COMPROBANTE+ '/documents';	
-	var _headers = HEADERS_COMPROBANTE;	
-	_headers.Authorization = 'Bearer ' + token;
+async function sendOneCpe(json_xml, token) {
+	const _urlEnvioCPE = URL_COMPROBANTE+ '/documents';
+	const _headers = { ...HEADERS_COMPROBANTE, 'Authorization': 'Bearer ' + token };
 
-	return await fetch(_urlEnvioCPE, {
-			method: 'POST',
-			headers: _headers,
-			body:json_xml
-		}).then(res => res.json());
+	// Si json_xml es un string, lo enviamos directamente como data
+	if (typeof json_xml === 'string') {
+		return await fetchAxios(_urlEnvioCPE, 'POST', _headers, json_xml);
+	} else {
+		// Si es un objeto, lo enviamos como objeto para que axios lo convierta a JSON
+		return await fetchAxios(_urlEnvioCPE, 'POST', _headers, json_xml);
+	}
 }
 
-async function sendRetryOneCpe(_external_id, token) {	
-	const _urlEnvioRetryCPE = URL_COMPROBANTE+ '/send';	
-	var _headers = HEADERS_COMPROBANTE;	
-	_headers.Authorization = 'Bearer ' + token;
+async function sendRetryOneCpe(_external_id, token) {
+	const _urlEnvioRetryCPE = URL_COMPROBANTE+ '/send';
+	const _headers = { ...HEADERS_COMPROBANTE, 'Authorization': 'Bearer ' + token };
 
 	const _json = {
         "external_id": _external_id
-    }
+    };
 
-	return await fetch(_urlEnvioRetryCPE, {
-			method: 'POST',
-			headers: _headers,
-			body: JSON.stringify(_json)
-		}).then(res => res.json());
+	return await fetchAxios(_urlEnvioRetryCPE, 'POST', _headers, _json);
 }
 
 // isNoRegistrado no registrado en api, si es false entonces son boletas de resumen que no pasaron
@@ -972,19 +1015,14 @@ async function updateStatusCpe(el_cpe, rpt_cpe, isNoRegistrado = true) {
 
 async function sendResumen(fecha_resumen, token) {
 	const _urlResumenCPE = URL_COMPROBANTE + '/summaries';
-	var _headers = HEADERS_COMPROBANTE;	
-	_headers.Authorization = "Bearer " + token;
+	const _headers = { ...HEADERS_COMPROBANTE, 'Authorization': 'Bearer ' + token };
 
 	const jsonResumen = {
         "fecha_de_emision_de_documentos": fecha_resumen.split('/').reverse().join('-'),
         "codigo_tipo_proceso": '1'
     };
 
-	return await fetch(_urlResumenCPE, {
-		method: 'POST',
-		headers: _headers,
-		body: JSON.stringify(jsonResumen)
-		}).then(res => res.json());
+	return await fetchAxios(_urlResumenCPE, 'POST', _headers, jsonResumen);
 }
 
 async function saveResumen(idorg, idsede, fecha_resumen, external_id, tiket ) {
@@ -997,19 +1035,13 @@ async function saveResumen(idorg, idsede, fecha_resumen, external_id, tiket ) {
 
 async function consultaTicketResumen(resumen, token) {
 	const _urlConsultaResumenCPE = URL_COMPROBANTE + '/summaries/status';
-	var _headers = HEADERS_COMPROBANTE;	
-	_headers.Authorization = "Bearer " + token;
+	const _headers = { ...HEADERS_COMPROBANTE, 'Authorization': 'Bearer ' + token };
 
-	const jsonTicket = {
-        "external_id": resumen.external_id,
+	const _json = {
         "ticket": resumen.ticket
-    }
+    };
 
-    return await fetch(_urlConsultaResumenCPE, {
-		method: 'POST',
-		headers: _headers,
-		body: JSON.stringify(jsonTicket)
-		}).then(res => res.json());
+	return await fetchAxios(_urlConsultaResumenCPE, 'POST', _headers, _json);
 }
 
 
