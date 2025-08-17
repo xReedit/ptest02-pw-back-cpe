@@ -97,7 +97,7 @@ const emitirRespuesta = async (xquery) => {
     const retryOptions = {
         maxRetries: 2,           // Máximo 2 reintentos para consultas SQL
         initialDelay: 500,       // Espera inicial de 500ms
-        maxDelay: 3000,          // Máximo 3 segundos de espera
+        maxDelay: 10000,          // Máximo 3 segundos de espera
         shouldRetry: isRetryableDbError // Función que determina si se debe reintentar
     };
     
@@ -147,7 +147,7 @@ const emitirRespuestaSP = async (xquery) => {
     const retryOptions = {
         maxRetries: 2,           // Máximo 2 reintentos para consultas SQL
         initialDelay: 500,       // Espera inicial de 500ms
-        maxDelay: 3000,          // Máximo 3 segundos de espera
+        maxDelay: 10000,          // Máximo 3 segundos de espera
         shouldRetry: isRetryableDbError // Función que determina si se debe reintentar
     };
     

@@ -18,7 +18,7 @@ const withTransaction = async (fn, sequelize, options = {}) => {
     const retryOptions = {
         maxRetries: options.maxRetries || 2,
         initialDelay: options.initialDelay || 500,
-        maxDelay: options.maxDelay || 3000,
+        maxDelay: options.maxDelay || 10000,
         shouldRetry: isRetryableDbError
     };
 

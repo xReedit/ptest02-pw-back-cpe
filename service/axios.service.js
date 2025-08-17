@@ -20,7 +20,7 @@ async function fetchAxios(url, method, headers, body, timeout = 15000) {
     const retryOptions = {
         maxRetries: 2,           // Máximo 2 reintentos
         initialDelay: 1000,      // Espera inicial de 1 segundo
-        maxDelay: 5000,         // Máximo 5 segundos de espera
+        maxDelay: 10000,         // Máximo 5 segundos de espera
         shouldRetry: isRetryableHttpError // Función que determina si se debe reintentar
     };
 
