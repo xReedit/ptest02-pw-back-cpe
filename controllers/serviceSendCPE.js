@@ -8,73 +8,36 @@ let config = require('../config');
 const apiConsultaSunatCPE = require('../controllers/apiConsultaValidezSunat');
 // let managerFilter = require('../utilitarios/filters');
 
-const axios = require("axios");
 const cron = require('node-cron');
+const { withRetry, isRetryableDbError } = require('../service/retry.service');
+const { fetchAxios } = require('../service/axios.service');
 
-// Función centralizada para manejar todas las peticiones HTTP con axios
-async function fetchAxios(url, method, headers, body, timeout = 30000) {
-    try {
-        const config = {
-            method: method,
-            url: url,
-            headers: headers,
-            timeout: timeout, // 30 segundos por defecto
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity
-        };
-        
-        // Si hay body, lo procesamos según su tipo
-        if (body) {
-            if (method.toUpperCase() === 'GET') {
-                config.params = body;
-            } else {
-                // Si es string, asumimos que ya está formateado (XML o JSON string)
-                if (typeof body === 'string') {
-                    // Verificamos si parece JSON
-                    if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
-                        try {
-                            // Intentamos parsearlo como JSON
-                            const jsonData = JSON.parse(body);
-                            config.data = jsonData;
-                            // Aseguramos que el header Content-Type sea application/json
-                            config.headers = { ...config.headers, 'Content-Type': 'application/json' };
-                        } catch (e) {
-                            // Si falla el parse, lo enviamos como string
-                            config.data = body;
-                        }
-                    } else {
-                        // Si no parece JSON, lo enviamos como está (probablemente XML)
-                        config.data = body;
-                    }
-                } else {
-                    // Si es un objeto, lo enviamos como JSON
-                    config.data = body;
-                    // Aseguramos que el header Content-Type sea application/json
-                    config.headers = { ...config.headers, 'Content-Type': 'application/json' };
-                }
-            }
-        }
-        
-        console.log(`Enviando petición a ${url} con método ${method}`);
-        const response = await axios(config);
-        return response.data;
-    } catch (error) {
-        console.error(`Error en fetchAxios (${url}):`, error.message);
-        // Si hay timeout, lo indicamos claramente
-        if (error.code === 'ECONNABORTED') {
-            console.error('La petición excedió el tiempo de espera (timeout):', timeout, 'ms');
-        }
-        return { 
-            success: false, 
-            message: error.message || 'Error en la petición', 
-            error: error.response ? error.response.data : error.message 
-        };
-    }
-}
 
 // var FormData = require('form-data');
 let url_restobar = config.URL_RESTOBAR;
-let sequelize = new Sequelize(config.database, config.username, config.password, config.sequelizeOption);
+// Configuración de Sequelize con opciones mejoradas para evitar bloqueos
+const sequelizeOptions = {
+    ...config.sequelizeOption,
+    pool: {
+        max: 10,         // máximo de 10 conexiones en el pool
+        min: 0,          // mínimo de 0 conexiones en el pool
+        acquire: 30000,  // tiempo máximo para adquirir una conexión (30 segundos)
+        idle: 10000,     // tiempo máximo que una conexión puede estar inactiva (10 segundos)
+        evict: 1000      // ejecutar el limpiador de conexiones cada 1 segundo
+    },
+    retry: {
+        max: 3           // reintentar la conexión hasta 3 veces
+    },
+    dialectOptions: {
+        connectTimeout: 15000, // timeout de conexión (15 segundos)
+        // Configuración específica para evitar bloqueos en consultas largas
+        options: {
+            requestTimeout: 15000 // timeout para consultas (15 segundos)
+        }
+    }
+};
+
+let sequelize = new Sequelize(config.database, config.username, config.password, sequelizeOptions);
 let token_sunat = ''
 let token_sunat_exp = 0
 		
@@ -129,32 +92,124 @@ module.exports.execRunCPEApiSunat = execRunCPEApiSunat;
 
 const emitirRespuesta = async (xquery) => {
     console.log(xquery);
-    try {
-         return await sequelize.query(xquery, { type: sequelize.QueryTypes.SELECT });
-
-    } catch (err) {
-        console.error(err);
+    
+    // Configuración de reintentos para consultas SQL
+    const retryOptions = {
+        maxRetries: 2,           // Máximo 2 reintentos para consultas SQL
+        initialDelay: 500,       // Espera inicial de 500ms
+        maxDelay: 3000,          // Máximo 3 segundos de espera
+        shouldRetry: isRetryableDbError // Función que determina si se debe reintentar
+    };
+    
+    // Usar withRetry para manejar reintentos con backoff exponencial
+    return await withRetry(async () => {
+        // Establecer un timeout para la consulta
+        const queryOptions = { 
+            type: sequelize.QueryTypes.SELECT,
+            // Establecer un timeout para la consulta (15 segundos)
+            timeout: 10000,
+            // Usar transacción para asegurar que las conexiones se liberan correctamente
+            transaction: null
+        };
+        
+        // Usar una transacción para asegurar que las conexiones se liberan correctamente
+        const transaction = await sequelize.transaction({
+            isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED // Nivel de aislamiento menos restrictivo
+        });
+        
+        try {
+            queryOptions.transaction = transaction;
+            const startTime = Date.now();
+            const result = await sequelize.query(xquery, queryOptions);
+            const endTime = Date.now();
+            console.log(`Consulta SQL completada en ${endTime - startTime}ms`);
+            
+            await transaction.commit();
+            return result;
+        } catch (transactionError) {
+            // Asegurar que la transacción se revierte en caso de error
+            await transaction.rollback();
+            throw transactionError;
+        }
+    }, retryOptions).catch(err => {
+        console.error('Error en consulta SQL después de reintentos:', err.message);
+        if (err.message.includes('timeout')) {
+            console.error('La consulta excedió el tiempo límite (timeout)');
+        }
         return false;
-    }
+    });
 };
 
 const emitirRespuestaSP = async (xquery) => {
     console.log(xquery);
-    try {
-        const rows = await sequelize.query(xquery, { type: sequelize.QueryTypes.SELECT });
-        const arr = Object.values(rows[0]);
-        return arr;
-    } catch (err) {
-        console.error(err);
+    
+    // Configuración de reintentos para consultas SQL
+    const retryOptions = {
+        maxRetries: 2,           // Máximo 2 reintentos para consultas SQL
+        initialDelay: 500,       // Espera inicial de 500ms
+        maxDelay: 3000,          // Máximo 3 segundos de espera
+        shouldRetry: isRetryableDbError // Función que determina si se debe reintentar
+    };
+    
+    // Usar withRetry para manejar reintentos con backoff exponencial
+    return await withRetry(async () => {
+        // Establecer un timeout para la consulta
+        const queryOptions = { 
+            type: sequelize.QueryTypes.SELECT,
+            // Establecer un timeout para la consulta (15 segundos)
+            timeout: 15000,
+            // Usar transacción para asegurar que las conexiones se liberan correctamente
+            transaction: null
+        };
+        
+        // Usar una transacción para asegurar que las conexiones se liberan correctamente
+        const transaction = await sequelize.transaction({
+            isolationLevel: Sequelize.Transaction.ISOLATION_LEVELS.READ_COMMITTED // Nivel de aislamiento menos restrictivo
+        });
+        
+        try {
+            queryOptions.transaction = transaction;
+            const startTime = Date.now();
+            const rows = await sequelize.query(xquery, queryOptions);
+            const endTime = Date.now();
+            console.log(`Consulta SQL (SP) completada en ${endTime - startTime}ms`);
+            
+            await transaction.commit();
+            
+            // Procesar el resultado solo si hay datos
+            if (rows && rows.length > 0 && rows[0]) {
+                const arr = Object.values(rows[0]);
+                return arr;
+            }
+            return [];
+        } catch (transactionError) {
+            // Asegurar que la transacción se revierte en caso de error
+            await transaction.rollback();
+            throw transactionError;
+        }
+    }, retryOptions).catch(err => {
+        console.error('Error en consulta SQL (SP) después de reintentos:', err.message);
+        if (err.message.includes('timeout')) {
+            console.error('La consulta excedió el tiempo límite (timeout)');
+        }
         return false;
-    }
+    });
 };
 
 
 
 const ejecutarQuery = async (query) => {
-    const resultado = await emitirRespuesta(query);
-    return resultado || [];
+    try {
+        const resultado = await emitirRespuesta(query);
+        if (resultado === false) {
+            console.warn('La consulta falló, retornando array vacío');
+            return [];
+        }
+        return resultado;
+    } catch (error) {
+        console.error('Error en ejecutarQuery:', error.message);
+        return [];
+    }
 };
 
 
